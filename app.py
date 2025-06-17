@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import date
 from datetime import timedelta
 import math
+import os
 
 from dash import Dash, dcc, html, dash_table
 from dash.dependencies import Input, Output
@@ -588,4 +589,6 @@ def update_rep_section(sel):
 # ─── 7. Run ─────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8053)
+    port = int(os.environ.get("PORT", 8050))  # Render sets PORT dynamically
+    app.run(host="0.0.0.0", port=port, debug=True)
+
