@@ -272,7 +272,7 @@ from urllib.parse import quote_plus
 
 # ─── 0. Cookie Loader ─────────────────────────────────────────────────────────
 
-def get_session_with_canvas_cookie(cookie_path="canvas_cookies.json"):
+def get_session_with_canvas_cookie(cookie_path="/etc/secrets/canvas_cookies.json"):
     import json
     session = requests.Session()
     with open(cookie_path, "r") as f:
