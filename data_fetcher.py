@@ -10,10 +10,11 @@ from urllib.parse import quote_plus
 # ─── 0. Cookie Loader ─────────────────────────────────────────────────────────
 
 def get_session_with_canvas_cookie(cookie_path="canvas_cookies.json"):
-    with open(cookie_path, "r") as f:
-        cookie_list = json.load(f)
+    import json
     session = requests.Session()
-    for cookie in cookie_list:
+    with open(cookie_path, "r") as f:
+        cookies = json.load(f)
+    for cookie in cookies:
         session.cookies.set(cookie['name'], cookie['value'])
     return session
 
@@ -51,6 +52,40 @@ def build_url(status_filter_id: int, start_date: str, end_date: str) -> str:
         .replace("REPLACE_START", quote_plus(start_date))
         .replace("REPLACE_END",   quote_plus(end_date))
     )
+
+def fetch_status_table(status_name: str,
+                       status_filter_id: int,
+                       start_date: str,
+                       end_date:   str) -> pd.DataFrame:
+    url = build_url(status_filter_id, start_date, end_date)
+    resp = requests.get(url, headers=HEADERS)
+    resp.raise_for_status()
+
+    # Strip HTML tags, load CSV
+    cleaned = re.sub(r"<[^>]+>", "", resp.text).strip()
+    if not cleaned:
+        return pd.DataFrame()
+
+    df = pd.read_csv(StringIO(cleaned), engine="python")
+    # drop any Unnamed columns
+    df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
+
+    # pick off the correct date‐column
+    look = f"{status_name} Date".lower()
+    match = next((c for c in df.columns if c.lower()==look), None)
+    df["Status"] = status_name
+    df["Date"]   = df[match] if match else pd.NaT
+
+    # classify order type
+    def classify(oid):
+        if isinstance(oid, str):
+            if oid.startswith("C"): return "Claim"
+            if oid.startswith("R"): return "Reorder"
+            if re.match(r"^\d", oid): return "New"
+        return "New"
+
+    df["Order Type"] = df["ID"].apply(classify)
+    return df[["ID","Order Type","Franchisee","Date","Status"]]
 
 def generate_combined_jobs_csv(start_date: str,
                                end_date:   str,
