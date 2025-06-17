@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: aod-dashboard
+    env: python
+    buildCommand: ""
+    startCommand: gunicorn app:app.server --timeout 120
+    plan: free
+    envVars:
+      - key: COOKIE_PATH
+        value: canvas_cookies.json
