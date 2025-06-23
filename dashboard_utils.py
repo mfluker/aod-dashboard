@@ -6,11 +6,18 @@ from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go
 from dash import dash_table, dcc, html
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 
-from datetime import datetime, timedelta
-from typing import Optional
+from functools import lru_cache
+
+
+@lru_cache(maxsize=1)
+def load_master_data():
+    """Read and cache the master parquet files."""
+    jobs_path = Path("MasterData/all_jobs_data.parquet")
+    calls_path = Path("MasterData/all_call_center_data.parquet")
+    jobs_df = pd.read_parquet(jobs_path)
+    calls_df = pd.read_parquet(calls_path)
+    return jobs_df, calls_df
 
 
 def get_delta_percent(current, previous):
@@ -375,6 +382,36 @@ def generate_reference_weeks(selected_start_date: str, df) -> dict:
     return result
 
 
+def create_call_center_table(df, table_id, columns, extra_conditional=None):
+    """Return a styled DataTable for call center metrics."""
+    base_conditional = [
+        {"if": {"row_index": "odd"}, "backgroundColor": "#F9F9F9"},
+        {"if": {"row_index": "even"}, "backgroundColor": "#FFFFFF"},
+        {
+            "if": {"filter_query": '{Call Center Rep} = "Totals"'},
+            "borderTop": "1px solid #000",
+            "fontWeight": "600",
+        },
+    ]
+
+    if extra_conditional:
+        base_conditional.extend(extra_conditional)
+
+    return dash_table.DataTable(
+        id=table_id,
+        columns=[{"name": col, "id": col} for col in columns],
+        data=df.to_dict("records"),
+        style_cell={
+            "padding": "8px",
+            "fontFamily": "Segoe UI, sans-serif",
+            "fontSize": "14px",
+            "textAlign": "center",
+        },
+        style_header={"backgroundColor": "#2C3E70", "color": "white", "fontWeight": "bold"},
+        style_data_conditional=base_conditional,
+    )
+
+
 def update_dashboard(selected_week, selected_franchisee="All"):
     if not selected_week:
         return html.Div(
@@ -386,13 +423,8 @@ def update_dashboard(selected_week, selected_franchisee="All"):
 
     start_csv, end_csv = selected_week.split("|")
 
-    # Load once at startup
-    MASTER_JOBS_PARQUET = Path("MasterData/all_jobs_data.parquet")
-    MASTER_CALLS_PARQUET = Path("MasterData/all_call_center_data.parquet")
-
-    # Read full data into memory
-    jobs_all_df = pd.read_parquet(MASTER_JOBS_PARQUET)
-    calls_all_df = pd.read_parquet(MASTER_CALLS_PARQUET)
+    # Read full data into memory (cached)
+    jobs_all_df, calls_all_df = load_master_data()
 
     # Historical period: 1 week ago
     reference_weeks = generate_reference_weeks(start_csv, jobs_all_df)
@@ -621,100 +653,38 @@ def update_dashboard(selected_week, selected_franchisee="All"):
                                         "fontStyle": "italic",
                                     },
                                 ),
-                                dash_table.DataTable(
-                                    id="inbound-table",
-                                    columns=[
-                                        {
-                                            "name": "Call Center Rep",
-                                            "id": "Call Center Rep",
-                                        },
-                                        {
-                                            "name": "Inbound Lead Count",
-                                            "id": "Inbound Lead Count",
-                                        },
-                                        {
-                                            "name": "Inbound Booked Count",
-                                            "id": "Inbound Booked Count",
-                                        },
-                                        {
-                                            "name": "Inbound Help Rate (%)",
-                                            "id": "Inbound Help Rate (%)",
-                                        },
+                                create_call_center_table(
+                                    inbound_df,
+                                    "inbound-table",
+                                    [
+                                        "Call Center Rep",
+                                        "Inbound Lead Count",
+                                        "Inbound Booked Count",
+                                        "Inbound Help Rate (%)",
                                     ],
-                                    data=inbound_df.to_dict("records"),
-                                    style_cell={
-                                        "padding": "8px",
-                                        "fontFamily": "Segoe UI, sans-serif",
-                                        "fontSize": "14px",
-                                        "textAlign": "center",
-                                    },
-                                    style_header={
-                                        "backgroundColor": "#2C3E70",
-                                        "color": "white",
-                                        "fontWeight": "bold",
-                                    },
-                                    # Inbound Conditional Formatiing
-                                    style_data_conditional=[
-                                        # Subtle Zebra Stripes
+                                    extra_conditional=[
                                         {
-                                            "if": {"row_index": "odd"},
-                                            "backgroundColor": "#F9F9F9",
-                                        },
-                                        {
-                                            "if": {"row_index": "even"},
-                                            "backgroundColor": "#FFFFFF",
-                                        },
-                                        # Totals Row
-                                        {
-                                            "if": {
-                                                "filter_query": '{Call Center Rep} = "Totals"'
-                                            },
-                                            "borderTop": "1px solid #000",
-                                            "fontWeight": "600",
-                                        },
-                                        # Inbound Help Rate %
-                                        # ≥ 86% → soft green
-                                        {
-                                            "if": {
-                                                "filter_query": "{Inbound Rate Value} >= 86",
-                                                "column_id": "Inbound Help Rate (%)",
-                                            },
+                                            "if": {"filter_query": "{Inbound Rate Value} >= 86", "column_id": "Inbound Help Rate (%)"},
                                             "backgroundColor": "#e6ffed",
                                             "color": "#2c662d",
                                         },
-                                        # 80–85% → lighter green
                                         {
-                                            "if": {
-                                                "filter_query": "{Inbound Rate Value} >= 80 && {Inbound Rate Value} < 86",
-                                                "column_id": "Inbound Help Rate (%)",
-                                            },
+                                            "if": {"filter_query": "{Inbound Rate Value} >= 80 && {Inbound Rate Value} < 86", "column_id": "Inbound Help Rate (%)"},
                                             "backgroundColor": "#f0fff4",
                                             "color": "#336633",
                                         },
-                                        # 70–79% → soft yellow
                                         {
-                                            "if": {
-                                                "filter_query": "{Inbound Rate Value} >= 70 && {Inbound Rate Value} < 80",
-                                                "column_id": "Inbound Help Rate (%)",
-                                            },
+                                            "if": {"filter_query": "{Inbound Rate Value} >= 70 && {Inbound Rate Value} < 80", "column_id": "Inbound Help Rate (%)"},
                                             "backgroundColor": "#fffde1",
                                             "color": "#665c00",
                                         },
-                                        # 60–69% → light coral
                                         {
-                                            "if": {
-                                                "filter_query": "{Inbound Rate Value} >= 60 && {Inbound Rate Value} < 70",
-                                                "column_id": "Inbound Help Rate (%)",
-                                            },
+                                            "if": {"filter_query": "{Inbound Rate Value} >= 60 && {Inbound Rate Value} < 70", "column_id": "Inbound Help Rate (%)"},
                                             "backgroundColor": "#ffe6e6",
                                             "color": "#802020",
                                         },
-                                        # < 60% → pale pink
                                         {
-                                            "if": {
-                                                "filter_query": "{Inbound Rate Value} < 60",
-                                                "column_id": "Inbound Help Rate (%)",
-                                            },
+                                            "if": {"filter_query": "{Inbound Rate Value} < 60", "column_id": "Inbound Help Rate (%)"},
                                             "backgroundColor": "#ffebe6",
                                             "color": "#800000",
                                         },
@@ -744,56 +714,14 @@ def update_dashboard(selected_week, selected_franchisee="All"):
                                         "fontStyle": "italic",
                                     },
                                 ),
-                                dash_table.DataTable(
-                                    id="outbound-table",
-                                    columns=[
-                                        {
-                                            "name": "Call Center Rep",
-                                            "id": "Call Center Rep",
-                                        },
-                                        {
-                                            "name": "Outbound Call Count",
-                                            "id": "Outbound Call Count",
-                                        },
-                                        {
-                                            "name": "Outbound Booked Count",
-                                            "id": "Outbound Booked Count",
-                                        },
-                                        {
-                                            "name": "Outbound Help Rate (%)",
-                                            "id": "Outbound Help Rate (%)",
-                                        },
-                                    ],
-                                    data=outbound_df.to_dict("records"),
-                                    style_cell={
-                                        "padding": "8px",
-                                        "fontFamily": "Segoe UI, sans-serif",
-                                        "fontSize": "14px",
-                                        "textAlign": "center",
-                                    },
-                                    style_header={
-                                        "backgroundColor": "#2C3E70",
-                                        "color": "white",
-                                        "fontWeight": "bold",
-                                    },
-                                    style_data_conditional=[
-                                        # subtle zebra stripes
-                                        {
-                                            "if": {"row_index": "odd"},
-                                            "backgroundColor": "#F9F9F9",
-                                        },
-                                        {
-                                            "if": {"row_index": "even"},
-                                            "backgroundColor": "#FFFFFF",
-                                        },
-                                        # Totals row separator
-                                        {
-                                            "if": {
-                                                "filter_query": '{Call Center Rep} = "Totals"'
-                                            },
-                                            "borderTop": "1px solid #000",
-                                            "fontWeight": "600",
-                                        },
+                                create_call_center_table(
+                                    outbound_df,
+                                    "outbound-table",
+                                    [
+                                        "Call Center Rep",
+                                        "Outbound Call Count",
+                                        "Outbound Booked Count",
+                                        "Outbound Help Rate (%)",
                                     ],
                                 ),
                             ],

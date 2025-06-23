@@ -1,14 +1,8 @@
 # Reporting_Dashboard-Copy1.ipynb
-import re
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 from pathlib import Path
-from datetime import date
-from datetime import timedelta
-import math
 import os
-from dash import Dash, dcc, html, dash_table
+from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
 from data_fetcher import *
 from dashboard_utils import *

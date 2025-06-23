@@ -7,42 +7,23 @@ import re
 
 from io import StringIO
 from pathlib import Path
-from typing import Optional, Tuple
 from urllib.parse import quote_plus
 
 
 # ─── 0. Cookie Loader ─────────────────────────────────────────────────────────
+def get_session_with_canvas_cookie(cookie_path=None):
+    """Return a ``requests.Session`` populated with Canvas cookies."""
+    if cookie_path is None:
+        cookie_path = os.environ.get("COOKIE_PATH", "canvas_cookies.json")
 
-# For RENDER!
-def get_session_with_canvas_cookie(cookie_path="/etc/secrets/canvas_cookies.json"):
-    import json
-    session = requests.Session()
     with open(cookie_path, "r") as f:
-        cookies = json.load(f)
-    for cookie in cookies:
-        session.cookies.set(cookie['name'], cookie['value'])
-    return session
-
-# For Testing!
-
-# COOKIE_PATH = "canvas_cookies.json"
-
-
-def get_session_with_canvas_cookie():
-    """
-    Load cookies from COOKIE_PATH and return a requests.Session
-    that only sets name, value, domain, path, secure, and expires.
-    """
-    with open(COOKIE_PATH, "r") as f:
         raw_cookies = json.load(f)
 
     session = requests.Session()
     for c in raw_cookies:
-        # required:
         name = c.get("name")
         value = c.get("value")
 
-        # optional but valid in requests:
         params = {}
         if "domain" in c:
             params["domain"] = c["domain"]
@@ -51,7 +32,6 @@ def get_session_with_canvas_cookie():
         if "secure" in c:
             params["secure"] = c["secure"]
         if "expirationDate" in c:
-            # requests wants 'expires' (an int)
             params["expires"] = int(c["expirationDate"])
 
         session.cookies.set(name, value, **params)
