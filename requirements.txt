@@ -4,3 +4,5 @@ plotly
 requests
 gunicorn
 beautifulsoup4
+pyarrow
+
