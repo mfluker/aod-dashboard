@@ -2,4 +2,5 @@ dash
 pandas
 plotly
 requests
-gunicorn
+gunicornbeautifulsoup4
+beautifulsoup4
