@@ -10,6 +10,10 @@ from pathlib import Path
 from typing import Optional, Tuple
 from urllib.parse import quote_plus
 
+import requests
+import pandas as pd
+from bs4 import BeautifulSoup
+
 
 # ─── 0. Cookie Loader ─────────────────────────────────────────────────────────
 
@@ -28,35 +32,35 @@ def get_session_with_canvas_cookie(cookie_path="/etc/secrets/canvas_cookies.json
 # COOKIE_PATH = "canvas_cookies.json"
 
 
-def get_session_with_canvas_cookie():
-    """
-    Load cookies from COOKIE_PATH and return a requests.Session
-    that only sets name, value, domain, path, secure, and expires.
-    """
-    with open(COOKIE_PATH, "r") as f:
-        raw_cookies = json.load(f)
+# def get_session_with_canvas_cookie():
+#     """
+#     Load cookies from COOKIE_PATH and return a requests.Session
+#     that only sets name, value, domain, path, secure, and expires.
+#     """
+#     with open(COOKIE_PATH, "r") as f:
+#         raw_cookies = json.load(f)
 
-    session = requests.Session()
-    for c in raw_cookies:
-        # required:
-        name = c.get("name")
-        value = c.get("value")
+#     session = requests.Session()
+#     for c in raw_cookies:
+#         # required:
+#         name = c.get("name")
+#         value = c.get("value")
 
-        # optional but valid in requests:
-        params = {}
-        if "domain" in c:
-            params["domain"] = c["domain"]
-        if "path" in c:
-            params["path"] = c["path"]
-        if "secure" in c:
-            params["secure"] = c["secure"]
-        if "expirationDate" in c:
-            # requests wants 'expires' (an int)
-            params["expires"] = int(c["expirationDate"])
+#         # optional but valid in requests:
+#         params = {}
+#         if "domain" in c:
+#             params["domain"] = c["domain"]
+#         if "path" in c:
+#             params["path"] = c["path"]
+#         if "secure" in c:
+#             params["secure"] = c["secure"]
+#         if "expirationDate" in c:
+#             # requests wants 'expires' (an int)
+#             params["expires"] = int(c["expirationDate"])
 
-        session.cookies.set(name, value, **params)
+#         session.cookies.set(name, value, **params)
 
-    return session
+#     return session
 
 
 # ─── 1. JOBS-STATUS SCRAPER ───────────────────────────────────────────────────
@@ -259,3 +263,39 @@ def load_conversion_data(start_date: str, end_date: str, include_homeshow: bool 
         ]
 
     return df, opts
+
+
+# Marekting Pull
+def fetch_roi(start: str, end: str, session: requests.Session) -> pd.DataFrame:
+    session = get_session_with_canvas_cookie()
+    
+    url = "https://canvas.artofdrawers.com/scripts/marketing_roi.html"
+    # hard-coded campaigns; change if you want dynamic
+    campaign_ids = [62,59,21,63,64,60,61]
+    params = [("campaign_ids[]", cid) for cid in campaign_ids] + [
+        ("sd", start),
+        ("ed", end),
+        ("submit", "Generate Report")
+    ]
+    r = session.get(url, params=params)
+    r.raise_for_status()
+    soup = BeautifulSoup(r.text, "html.parser")
+
+    # find “Grand Totals” two-row table
+    grand_th = next(
+        (th for th in soup.find_all("th", {"rowspan": "2"})
+         if "Grand" in th.get_text()), None
+    )
+    if not grand_th:
+        logging.warning(f"No ROI Grand Totals for {start}–{end}")
+        return pd.DataFrame()
+
+    tbl = grand_th.find_parent("table")
+    # headers = first <tr>, values = second <tr>
+    hdrs = [th.get_text(strip=True).replace("\n"," ") for th in tbl.find_all("tr")[0].find_all("th")]
+    vals = [td.get_text(strip=True) for td in tbl.find_all("tr")[1].find_all("td")]
+
+    df = pd.DataFrame([vals], columns=hdrs[1:])  # drop the rowspan “Grand Totals” header
+    df["week_start"] = start
+    df["week_end"]   = end
+    return df

@@ -1,4 +1,4 @@
-# Reporting_Dashboard-Copy1.ipynb
+# testing_dashboard.ipynb
 import re
 import pandas as pd
 import plotly.express as px
@@ -16,13 +16,15 @@ from datetime import datetime
 
 # Load in Data
 MASTER_JOBS_PARQUET = Path("MasterData/all_jobs_data.parquet")
-MASTER_CALLS_PARQUET = Path("MasterData/all_call_center_data.parquet")
+MASTER_CALLS_PARQUET = Path("MasterData/all_call_center_data.parquet") # Need to add in Marketing
+MASTER_ROI_PARQUET = Path("MasterData/all_roi_data.parquet")
 
 jobs_all_df = pd.read_parquet(MASTER_JOBS_PARQUET)
 calls_all_df = pd.read_parquet(MASTER_CALLS_PARQUET)
+roi_all_df = pd.read_parquet(MASTER_ROI_PARQUET)
 
 # Check if Dashboard Needs Updated Data
-jobs_all_df, calls_all_df = fetch_and_append_week_if_needed(jobs_all_df, calls_all_df)
+jobs_all_df, calls_all_df, roi_all_df = fetch_and_append_week_if_needed(jobs_all_df, calls_all_df, roi_all_df) # Need to add in marketing to this function
 
 
 # ─── 1. Instantiate Dash App & Layout ─────────────────────────────────────
@@ -127,7 +129,7 @@ def _update_dashboard_wrapper(selected_week, selected_franchisee):
 
 # ─── 3. Run ─────────────────────────────────────────────────────────────────
 # if __name__ == "__main__":
-#     app.run(debug=True, port=8057)
+#     app.run(debug=True, port=8058)
 
 # UNCOMMENT IF IT IS APP.PY
 if __name__ == "__main__":

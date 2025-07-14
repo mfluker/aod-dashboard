@@ -1,3 +1,4 @@
+import data_fetcher
 import math
 import re
 from datetime import datetime, date, timedelta
@@ -6,17 +7,151 @@ from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go
 from dash import dash_table, dcc, html
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
+from functools import lru_cache
 
-from datetime import datetime, timedelta
-from typing import Optional
+from data_fetcher import load_jobs_data, download_conversion_report, fetch_roi
 
+
+# Helpers
+@lru_cache(maxsize=1)
+
+def load_master_data():
+    """Read and cache the master parquet files."""
+    jobs_path = Path("MasterData/all_jobs_data.parquet")
+    calls_path = Path("MasterData/all_call_center_data.parquet")
+    roi_path = Path("MasterData/all_roi_data.parquet")
+    
+    jobs_df = pd.read_parquet(jobs_path)
+    calls_df = pd.read_parquet(calls_path)
+    roi_df = pd.read_parquet(roi_path)
+    return jobs_df, calls_df, roi_df
+    
 
 def get_delta_percent(current, previous):
     if previous in [None, 0]:
         return None
     return ((current - previous) / previous) * 100
+
+
+def get_last_full_week(for_date: date = None) -> tuple[str, str]:
+    """
+    Return the most recent full Sunday–Saturday week *before* the given date.
+    If no date is passed, use today.
+    Output is in (MM/DD/YYYY, MM/DD/YYYY) format.
+    """
+    if for_date is None:
+        for_date = date.today()
+
+    # Go to the previous Sunday
+    days_since_sunday = (for_date.weekday() + 1) % 7
+    last_sunday = for_date - timedelta(days=days_since_sunday + 7)
+    last_saturday = last_sunday + timedelta(days=6)
+
+    return last_sunday.strftime("%m/%d/%Y"), last_saturday.strftime("%m/%d/%Y")
+
+
+def parquet_has_week(df: pd.DataFrame, start: str, end: str) -> bool:
+
+    return ((df["week_start"] == start) & (df["week_end"] == end)).any()
+
+
+def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFrame, roi_df: pd.DataFrame):
+    jobs_path = Path("MasterData/all_jobs_data.parquet")
+    calls_path = Path("MasterData/all_call_center_data.parquet")
+    roi_path = Path("MasterData/all_roi_data.parquet")
+
+    start, end = get_last_full_week(date.today())
+
+    session = data_fetcher.get_session_with_canvas_cookie()
+
+    if not parquet_has_week(jobs_df, start, end):
+        print(f"📦 Adding Jobs data for {start} – {end}...")
+        new_jobs   = data_fetcher.load_jobs_data(start, end)
+        new_jobs["week_start"] = start
+        new_jobs["week_end"] = end
+        new_jobs["ID"] = new_jobs["ID"].astype(str)
+        jobs_df = pd.concat([jobs_df, new_jobs], ignore_index=True)
+        jobs_df.to_parquet(jobs_path, index=False)
+    else:
+        print(f"✅ Jobs data for {start} – {end} already present.")
+
+    if not parquet_has_week(calls_df, start, end):
+        print(f"📞 Adding Call Center data for {start} – {end}...")
+        inbound, _ = data_fetcher.download_conversion_report(start, end, include_homeshow=False)
+        outbound,_ = data_fetcher.download_conversion_report(start, end, include_homeshow=True)
+
+        inbound["mode"] = "inbound"
+        outbound["mode"] = "outbound"
+        for df in [inbound, outbound]:
+            df["week_start"] = start
+            df["week_end"] = end
+
+        calls_df = pd.concat([calls_df, inbound, outbound], ignore_index=True)
+        calls_df.to_parquet(calls_path, index=False)
+    else:
+        print(f"✅ Call Center data for {start} – {end} already present.")
+
+    if not parquet_has_week(roi_df, start, end):
+        print(f"Adding ROI data for {start} – {end}...")
+        new_roi = data_fetcher.fetch_roi(start, end, session) 
+        new_roi["week_start"] = start
+        new_roi["week_end"] = end
+
+        roi_df = pd.concat([roi_df, new_roi], ignore_index=True)
+        roi_df.to_parquet(roi_path, index=False)
+    else:
+        print(f"✅ ROI data for {start} – {end} already present.")
+
+    return jobs_df, calls_df, roi_df
+
+
+def generate_reference_weeks(selected_start_date: str, df) -> dict:
+    """
+    Given a selected start date and a DataFrame with 'week_start' column,
+    return valid reference weeks (e.g., 1 week ago, 1 month ago),
+    ensuring that the returned weeks actually exist in the dataset.
+
+    Returns a dictionary of {label: (start_date_str, end_date_str) or (None, None)}
+    """
+    # Ensure all week_start values are datetime.date objects
+    available_weeks = (
+        df[["week_start", "week_end"]]
+        .drop_duplicates()
+        .dropna()
+        .assign(
+            week_start=lambda d: pd.to_datetime(d["week_start"]).dt.date,
+            week_end=lambda d: pd.to_datetime(d["week_end"]).dt.date,
+        )
+        .sort_values("week_start")
+        .reset_index(drop=True)
+    )
+
+    base_date = datetime.strptime(selected_start_date, "%m/%d/%Y").date()
+    reference_map = {
+        "1 week ago": 1,
+        "1 month ago": 4,
+        "3 months ago": 13,
+        "6 months ago": 26,
+        "1 year ago": 52,
+    }
+
+    result = {}
+    for label, weeks_back in reference_map.items():
+        target_date = base_date - timedelta(weeks=weeks_back)
+
+        # Find the closest matching week_start
+        match = available_weeks[available_weeks["week_start"] == target_date]
+
+        if not match.empty:
+            row = match.iloc[0]
+            result[label] = (
+                row["week_start"].strftime("%m/%d/%Y"),
+                row["week_end"].strftime("%m/%d/%Y"),
+            )
+        else:
+            result[label] = (None, None)
+
+    return result
 
 
 def format_with_change(current: float, previous: float) -> str:
@@ -71,6 +206,7 @@ def generate_week_options_from_parquet(jobs_df):
     return options
 
 
+# Builders
 def make_status_figure(jobs_df: pd.DataFrame, selected_franchisee: str, historical_lookup: dict) -> go.Figure:
     """
     Build and return the stacked-bar + totals figure for the given franchisee.
@@ -268,113 +404,157 @@ def make_status_figure(jobs_df: pd.DataFrame, selected_franchisee: str, historic
     return fig
 
 
-def get_last_full_week(for_date: date = None) -> tuple[str, str]:
+def build_call_center_metrics(outbound_df, proxy_last_week=None, booked_last_week=None):
     """
-    Return the most recent full Sunday–Saturday week *before* the given date.
-    If no date is passed, use today.
-    Output is in (MM/DD/YYYY, MM/DD/YYYY) format.
+    Reads the Totals row in outbound_df and returns
+    [touches_box, design_box] for use as metrics_children,
+    with five‐step coloring and border for touches.
     """
-    if for_date is None:
-        for_date = date.today()
-
-    # Go to the previous Sunday
-    days_since_sunday = (for_date.weekday() + 1) % 7
-    last_sunday = for_date - timedelta(days=days_since_sunday + 7)
-    last_saturday = last_sunday + timedelta(days=6)
-
-    return last_sunday.strftime("%m/%d/%Y"), last_saturday.strftime("%m/%d/%Y")
-
-
-def parquet_has_week(df: pd.DataFrame, start: str, end: str) -> bool:
-
-    return ((df["week_start"] == start) & (df["week_end"] == end)).any()
-
-
-def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFrame):
-    jobs_path = Path("MasterData/all_jobs_data.parquet")
-    calls_path = Path("MasterData/all_call_center_data.parquet")
-
-    start, end = get_last_full_week(date.today())
-
-    if not parquet_has_week(jobs_df, start, end):
-        print(f"📦 Adding Jobs data for {start} – {end}...")
-        new_jobs = load_jobs_data(start, end)
-        new_jobs["week_start"] = start
-        new_jobs["week_end"] = end
-        new_jobs["ID"] = new_jobs["ID"].astype(str)
-        jobs_df = pd.concat([jobs_df, new_jobs], ignore_index=True)
-        jobs_df.to_parquet(jobs_path, index=False)
-    else:
-        print(f"✅ Jobs data for {start} – {end} already present.")
-
-    if not parquet_has_week(calls_df, start, end):
-        print(f"📞 Adding Call Center data for {start} – {end}...")
-        inbound, _ = download_conversion_report(start, end, include_homeshow=False)
-        outbound, _ = download_conversion_report(start, end, include_homeshow=True)
-
-        inbound["mode"] = "inbound"
-        outbound["mode"] = "outbound"
-        for df in [inbound, outbound]:
-            df["week_start"] = start
-            df["week_end"] = end
-
-        calls_df = pd.concat([calls_df, inbound, outbound], ignore_index=True)
-        calls_df.to_parquet(calls_path, index=False)
-    else:
-        print(f"✅ Call Center data for {start} – {end} already present.")
-
-    return jobs_df, calls_df
-
-
-def generate_reference_weeks(selected_start_date: str, df) -> dict:
-    """
-    Given a selected start date and a DataFrame with 'week_start' column,
-    return valid reference weeks (e.g., 1 week ago, 1 month ago),
-    ensuring that the returned weeks actually exist in the dataset.
-
-    Returns a dictionary of {label: (start_date_str, end_date_str) or (None, None)}
-    """
-    # Ensure all week_start values are datetime.date objects
-    available_weeks = (
-        df[["week_start", "week_end"]]
-        .drop_duplicates()
-        .dropna()
-        .assign(
-            week_start=lambda d: pd.to_datetime(d["week_start"]).dt.date,
-            week_end=lambda d: pd.to_datetime(d["week_end"]).dt.date,
-        )
-        .sort_values("week_start")
-        .reset_index(drop=True)
-    )
-
-    base_date = datetime.strptime(selected_start_date, "%m/%d/%Y").date()
-    reference_map = {
-        "1 week ago": 1,
-        "1 month ago": 4,
-        "3 months ago": 13,
-        "6 months ago": 26,
-        "1 year ago": 52,
-    }
-
-    result = {}
-    for label, weeks_back in reference_map.items():
-        target_date = base_date - timedelta(weeks=weeks_back)
-
-        # Find the closest matching week_start
-        match = available_weeks[available_weeks["week_start"] == target_date]
-
-        if not match.empty:
-            row = match.iloc[0]
-            result[label] = (
-                row["week_start"].strftime("%m/%d/%Y"),
-                row["week_end"].strftime("%m/%d/%Y"),
-            )
+    
+    def _get_proxy_color(total_proxy):
+        """Determine color based on proxy count thresholds"""
+        if total_proxy >= 700:
+            return "#2c662d"  # dark green
+        elif total_proxy >= 650:
+            return "#336633"  # medium green
+        elif total_proxy >= 550:
+            return "#665c00"  # olive/gold
+        elif total_proxy >= 450:
+            return "#802020"  # dark coral
         else:
-            result[label] = (None, None)
+            return "#800000"  # dark red
+    
+    def _build_touches_box(totals, proxy_last_week):
+        """Build the touches metric box"""
+        total_proxy = int(totals["Outbound Communication Count"])
+        
+        # Determine color based on thresholds
+        proxy_color = _get_proxy_color(total_proxy)
+        
+        # Calculate delta and formatting
+        touches_delta = get_delta_percent(total_proxy, proxy_last_week)
+        touches_color = percent_to_color(touches_delta)
+        
+        if proxy_last_week is None:
+            touches_change_str = "–"
+        else:
+            touches_change_str = format_with_change(total_proxy, proxy_last_week).split()[-1]
+        
+        # Style definitions
+        main_number_style = {
+            "margin": 0,
+            "fontSize": "56px",
+            "color": percent_to_color(get_delta_percent(total_proxy, proxy_last_week)),
+        }
+        
+        label_style = {
+            "fontSize": "14px", 
+            "color": "gray"
+        }
+        
+        change_container_style = {
+            "fontSize": "13px", 
+            "marginTop": "4px"
+        }
+        
+        change_text_style = {
+            "color": (percent_to_color(get_delta_percent(total_proxy, proxy_last_week)) 
+                     if proxy_last_week is not None else "gray"),
+            "fontWeight": "bold",
+        }
+        
+        # Build the component
+        touches_box = html.Div(
+            children=[
+                html.H1(f"{total_proxy}", style=main_number_style),
+                html.Div("touches – proxy", style=label_style),
+                html.Div(
+                    children=[
+                        html.Span("1 Wk Ago: ", style={"fontWeight": "bold"}),
+                        html.Span(
+                            f"{int(proxy_last_week) if proxy_last_week is not None else '–'} ",
+                            style={"marginRight": "4px"},
+                        ),
+                        html.Span(touches_change_str, style=change_text_style),
+                    ],
+                    style=change_container_style,
+                ),
+            ],
+            style={"textAlign": "center"},
+        )
+        
+        return touches_box
+    
+    def _build_design_box(totals, booked_last_week):
+        """Build the design appointments metric box"""
+        total_booked = int(totals["Total Booked"])
+        
+        # Calculate delta and formatting
+        design_delta = get_delta_percent(total_booked, booked_last_week)
+        
+        if booked_last_week is None:
+            design_change_str = "–"
+        else:
+            design_change_str = format_with_change(total_booked, booked_last_week).split()[-1]
+        
+        # Style definitions
+        main_number_style = {
+            "margin": 0,
+            "fontSize": "56px",
+            "color": percent_to_color(get_delta_percent(total_booked, booked_last_week)),
+        }
+        
+        label_style = {
+            "fontSize": "14px", 
+            "color": "gray"
+        }
+        
+        change_container_style = {
+            "fontSize": "13px", 
+            "marginTop": "4px"
+        }
+        
+        change_text_style = {
+            "color": percent_to_color(get_delta_percent(total_booked, booked_last_week)),
+            "fontWeight": "bold",
+        }
+        
+        # Build the component
+        design_box = html.Div(
+            children=[
+                html.H1(f"{total_booked}", style=main_number_style),
+                html.Div("design appointments scheduled", style=label_style),
+                html.Div(
+                    children=[
+                        html.Span("1 Wk Ago: ", style={"fontWeight": "bold"}),
+                        html.Span(
+                            f"{int(booked_last_week) if booked_last_week is not None else '–'} ",
+                            style={"marginRight": "4px"},
+                        ),
+                        html.Span(design_change_str, style=change_text_style),
+                    ],
+                    style=change_container_style,
+                ),
+            ],
+            style={"textAlign": "center"},
+        )
+        
+        return design_box
+    
+    # Main function logic
+    # Pull the Totals row once
+    totals = outbound_df.loc[outbound_df["Call Center Rep"] == "Totals"].iloc[0]
 
-    return result
+    # Build touches box
+    touches_box = _build_touches_box(totals, proxy_last_week)
+    
+    # Build design appointments box
+    design_box = _build_design_box(totals, booked_last_week)
+
+    return [touches_box, design_box]
 
 
+# Updaters
 def update_dashboard(selected_week, selected_franchisee="All"):
     if not selected_week:
         return html.Div(
@@ -386,13 +566,16 @@ def update_dashboard(selected_week, selected_franchisee="All"):
 
     start_csv, end_csv = selected_week.split("|")
 
-    # Load once at startup
-    MASTER_JOBS_PARQUET = Path("MasterData/all_jobs_data.parquet")
-    MASTER_CALLS_PARQUET = Path("MasterData/all_call_center_data.parquet")
+    # # Load once at startup
+    # MASTER_JOBS_PARQUET = Path("MasterData/all_jobs_data.parquet")
+    # MASTER_CALLS_PARQUET = Path("MasterData/all_call_center_data.parquet")
 
-    # Read full data into memory
-    jobs_all_df = pd.read_parquet(MASTER_JOBS_PARQUET)
-    calls_all_df = pd.read_parquet(MASTER_CALLS_PARQUET)
+    # # Read full data into memory
+    # jobs_all_df = pd.read_parquet(MASTER_JOBS_PARQUET)
+    # calls_all_df = pd.read_parquet(MASTER_CALLS_PARQUET)
+
+    # Read full data into memory (cached)
+    jobs_all_df, calls_all_df, roi_df = load_master_data()
 
     # Historical period: 1 week ago
     reference_weeks = generate_reference_weeks(start_csv, jobs_all_df)
@@ -512,6 +695,97 @@ def update_dashboard(selected_week, selected_franchisee="All"):
         lambda row: build_inbound_tooltip(row, prev_inbound_rate), axis=1
     )
 
+    # filter current week and 1-week-ago
+    roi_curr = roi_df[
+        (roi_df["week_start"] == start_csv) &
+        (roi_df["week_end"]   == end_csv)
+    ]
+    roi_prev = roi_df[
+        (roi_df["week_start"] == one_week_ago_start) &
+        (roi_df["week_end"]   == one_week_ago_end)
+    ]
+
+    # helper to safely pull a numeric value
+    import re
+
+    def _get_val(df, col):
+        """
+        Pull a numeric column out of a one‐row ROI DataFrame.
+        Strips out dollar signs, commas, etc., before converting to float.
+        Returns None if the column is missing or the DataFrame is empty.
+        """
+        if df.empty or col not in df.columns:
+            return None
+    
+        raw = df.iloc[0][col]
+        # If it’s already numeric, just return it
+        if isinstance(raw, (int, float)):
+            return float(raw)
+    
+        # Otherwise, strip out anything that’s not a digit, dot or minus
+        cleaned = re.sub(r"[^\d\.\-]", "", str(raw))
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+
+
+    curr = {
+        "Amount Invested":  _get_val(roi_curr, "Amount Invested"),
+        "Leads Generated":  _get_val(roi_curr, "# of Leads"),
+        "Revenue Per Appt": _get_val(roi_curr, "Revenue Per Appt"),
+    }
+    prev = {
+        k: _get_val(roi_prev, k if k != "Leads Generated" else "# of Leads")
+        for k in curr
+    }
+
+    cards = []
+    for label, now in curr.items():
+        old = prev[label]
+
+        # display value
+        if now is None:
+            disp = "–"
+        elif label == "Leads Generated":
+            disp = f"{int(now)}"
+        else:
+            disp = f"${now:,.2f}"
+
+        # change + color
+        if old in [None, 0]:
+            ch, col = "–", "#999"
+        else:
+            d   = get_delta_percent(now, old)
+            ch  = format_with_change(now, old).split()[-1]
+            col = percent_to_color(d)
+
+        cards.append(
+            html.Div(
+                children=[
+                    html.H1(disp,
+                            style={"margin": 0, "fontSize": "56px", "color": col}),
+                    html.Div(label,
+                             style={"fontSize": "14px", "color": "gray"}),
+                    html.Div(
+                        [
+                            html.Span("1 Wk Ago: ",
+                                      style={"fontWeight": "bold"}),
+                            html.Span(
+                                f"{('$'+format(old,',.2f')) if old not in [None,0] and label!='Leads Generated' else (str(int(old)) if old not in [None,0] else '–')} ",
+                                style={"marginRight": "4px"},
+                            ),
+                            html.Span(ch,
+                                      style={"color": col,
+                                             "fontWeight": "bold"}),
+                        ],
+                        style={"fontSize": "13px", "marginTop": "4px"},
+                    ),
+                ],
+                style={"textAlign": "center", "flex": "1"},
+            )
+        )
+    
     dashboard_sections=[
         # Operations header + chart
         html.Div(
@@ -826,179 +1100,60 @@ def update_dashboard(selected_week, selected_franchisee="All"):
             ]
         ),
 
-        # Marketing
+        # # Marketing
+        # html.Div(
+        #     style={"marginTop": "0px"},
+        #     children=[
+        #         html.H2(
+        #             "Marketing",
+        #             style={
+        #                 "marginTop": "10px",
+        #                 "marginBottom": "6px",
+        #                 "color": "#2C3E70",
+        #             },
+        #         ),
+        #         html.Div(
+        #             f"Data collected from the week of {lw_sun_str} – {lw_sat_str}",
+        #             style={
+        #                 "fontSize": "14px",
+        #                 "color": "gray",
+        #                 "fontStyle": "italic",
+        #                 "marginBottom": "24px",
+        #             },
+        #         ),
+        
+        # the actual Marketing section
         html.Div(
             style={"marginTop": "0px"},
             children=[
-                html.H2(
-                    "Marketing",
-                    style={
-                        "marginTop": "10px",
-                        "marginBottom": "6px",
-                        "color": "#2C3E70",
-                    },
-                ),
+                html.H2("Marketing",
+                        style={"marginTop": "10px",
+                               "marginBottom": "6px",
+                               "color": "#2C3E70"}),
+                html.Div(f"Data collected from the week of {lw_sun_str} – {lw_sat_str}",
+                         style={"fontSize": "14px",
+                                "color": "gray",
+                                "fontStyle": "italic",
+                                "marginBottom": "24px"}),
                 html.Div(
-                    f"Data collected from the week of {lw_sun_str} – {lw_sat_str}",
+                    id="marketing-metrics-container",
                     style={
-                        "fontSize": "14px",
-                        "color": "gray",
-                        "fontStyle": "italic",
-                        "marginBottom": "24px",
+                        "display": "flex",
+                        "justifyContent": "center",
+                        "gap": "80px",
+                        "marginBottom": "16px",
+                        "marginTop": "16px",
                     },
-                ),   
-            ]
-        )
+                    children=cards,
+                ),
+            ],
+        ),
+
+                
     ]
+    #     )
+    # ]
 
     
     return dashboard_sections
 
-def build_call_center_metrics(outbound_df, proxy_last_week=None, booked_last_week=None):
-    """
-    Reads the Totals row in outbound_df and returns
-    [touches_box, design_box] for use as metrics_children,
-    with five‐step coloring and border for touches.
-    """
-    
-    def _get_proxy_color(total_proxy):
-        """Determine color based on proxy count thresholds"""
-        if total_proxy >= 700:
-            return "#2c662d"  # dark green
-        elif total_proxy >= 650:
-            return "#336633"  # medium green
-        elif total_proxy >= 550:
-            return "#665c00"  # olive/gold
-        elif total_proxy >= 450:
-            return "#802020"  # dark coral
-        else:
-            return "#800000"  # dark red
-    
-    def _build_touches_box(totals, proxy_last_week):
-        """Build the touches metric box"""
-        total_proxy = int(totals["Outbound Communication Count"])
-        
-        # Determine color based on thresholds
-        proxy_color = _get_proxy_color(total_proxy)
-        
-        # Calculate delta and formatting
-        touches_delta = get_delta_percent(total_proxy, proxy_last_week)
-        touches_color = percent_to_color(touches_delta)
-        
-        if proxy_last_week is None:
-            touches_change_str = "–"
-        else:
-            touches_change_str = format_with_change(total_proxy, proxy_last_week).split()[-1]
-        
-        # Style definitions
-        main_number_style = {
-            "margin": 0,
-            "fontSize": "56px",
-            "color": percent_to_color(get_delta_percent(total_proxy, proxy_last_week)),
-        }
-        
-        label_style = {
-            "fontSize": "14px", 
-            "color": "gray"
-        }
-        
-        change_container_style = {
-            "fontSize": "13px", 
-            "marginTop": "4px"
-        }
-        
-        change_text_style = {
-            "color": (percent_to_color(get_delta_percent(total_proxy, proxy_last_week)) 
-                     if proxy_last_week is not None else "gray"),
-            "fontWeight": "bold",
-        }
-        
-        # Build the component
-        touches_box = html.Div(
-            children=[
-                html.H1(f"{total_proxy}", style=main_number_style),
-                html.Div("touches – proxy", style=label_style),
-                html.Div(
-                    children=[
-                        html.Span("1 Wk Ago: ", style={"fontWeight": "bold"}),
-                        html.Span(
-                            f"{int(proxy_last_week) if proxy_last_week is not None else '–'} ",
-                            style={"marginRight": "4px"},
-                        ),
-                        html.Span(touches_change_str, style=change_text_style),
-                    ],
-                    style=change_container_style,
-                ),
-            ],
-            style={"textAlign": "center"},
-        )
-        
-        return touches_box
-    
-    def _build_design_box(totals, booked_last_week):
-        """Build the design appointments metric box"""
-        total_booked = int(totals["Total Booked"])
-        
-        # Calculate delta and formatting
-        design_delta = get_delta_percent(total_booked, booked_last_week)
-        
-        if booked_last_week is None:
-            design_change_str = "–"
-        else:
-            design_change_str = format_with_change(total_booked, booked_last_week).split()[-1]
-        
-        # Style definitions
-        main_number_style = {
-            "margin": 0,
-            "fontSize": "56px",
-            "color": percent_to_color(get_delta_percent(total_booked, booked_last_week)),
-        }
-        
-        label_style = {
-            "fontSize": "14px", 
-            "color": "gray"
-        }
-        
-        change_container_style = {
-            "fontSize": "13px", 
-            "marginTop": "4px"
-        }
-        
-        change_text_style = {
-            "color": percent_to_color(get_delta_percent(total_booked, booked_last_week)),
-            "fontWeight": "bold",
-        }
-        
-        # Build the component
-        design_box = html.Div(
-            children=[
-                html.H1(f"{total_booked}", style=main_number_style),
-                html.Div("design appointments scheduled", style=label_style),
-                html.Div(
-                    children=[
-                        html.Span("1 Wk Ago: ", style={"fontWeight": "bold"}),
-                        html.Span(
-                            f"{int(booked_last_week) if booked_last_week is not None else '–'} ",
-                            style={"marginRight": "4px"},
-                        ),
-                        html.Span(design_change_str, style=change_text_style),
-                    ],
-                    style=change_container_style,
-                ),
-            ],
-            style={"textAlign": "center"},
-        )
-        
-        return design_box
-    
-    # Main function logic
-    # Pull the Totals row once
-    totals = outbound_df.loc[outbound_df["Call Center Rep"] == "Totals"].iloc[0]
-
-    # Build touches box
-    touches_box = _build_touches_box(totals, proxy_last_week)
-    
-    # Build design appointments box
-    design_box = _build_design_box(totals, booked_last_week)
-
-    return [touches_box, design_box]
