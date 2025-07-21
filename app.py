@@ -24,7 +24,7 @@ calls_all_df = pd.read_parquet(MASTER_CALLS_PARQUET)
 roi_all_df = pd.read_parquet(MASTER_ROI_PARQUET)
 
 # Check if Dashboard Needs Updated Data
-jobs_all_df, calls_all_df, roi_all_df = fetch_and_append_week_if_needed(jobs_all_df, calls_all_df, roi_all_df) # Need to add in marketing to this function
+# jobs_all_df, calls_all_df, roi_all_df = fetch_and_append_week_if_needed(jobs_all_df, calls_all_df, roi_all_df) # Need to add in marketing to this function
 
 
 # ─── 1. Instantiate Dash App & Layout ─────────────────────────────────────
