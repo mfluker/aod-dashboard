@@ -1,20 +1,23 @@
-# Art of Drawers Weekly Dashboard
+# 🖥️ Art of Drawers Dashboard
 
-This is a Dash-based dynamic reporting dashboard for weekly job and call center performance.
+A streamlined dashboard built with [Dash](https://dash.plotly.com/) and hosted on [Render](https://render.com), used for internal reporting of Jobs, Call Center, and Marketing ROI data.
 
-## Features
-- Automatically fetches weekly Canvas data using authenticated cookies
-- Displays operational and call center performance metrics
-- Deployed on Render.com with scheduled updates
+---
 
-## Setup Instructions
-1. Make sure your `canvas_cookies.json` is present in the root directory.
-2. Install dependencies:
-   pip install -r requirements.txt
-3. Run locally:
-   python app.py
+## 🔄 How It Works
 
-## Deployment
-Use `render.yaml` to deploy this project as a Dash app to Render.com.
+This dashboard **does not connect to Canvas directly**. All data is pre-fetched and maintained by the companion app [`aod-updater`](https://github.com/mfluker/aod-updater), which:
 
-NOTE: Be sure to upload your `canvas_cookies.json` as a Secret File in Render.
+- Authenticates with Canvas using a JSON cookie
+- Pulls weekly Jobs, Call Center, and ROI data
+- Appends it to master `.parquet` files
+- Pushes only the updated data into this repo's `MasterData/` folder
+
+When data is pushed to GitHub, **Render automatically redeploys** the dashboard with fresh insights.
+
+---
+
+## 📁 Data Structure
+
+All data is stored as `.parquet` files under:
+
