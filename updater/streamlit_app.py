@@ -7,7 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from datetime import date
 
-from updater_utils import load_master_data, fetch_and_append_week_if_needed
+from updater_utils import load_master_data, fetch_and_append_week_if_needed, get_last_full_week
+
 
 # --- SETUP ---
 st.set_page_config(page_title="📦 AoD Data Updater", layout="centered")
@@ -37,10 +38,19 @@ if cookie_file:
     st.success("✅ Cookie is valid.")
     Path("canvas_cookies.json").write_bytes(cookie_file.read())
 
+
 # --- FETCH AND PUSH LOGIC ---
 if cookie_file and st.button("🔄 Fetch + Push Weekly Data"):
     with st.status("📦 Fetching new data if needed...", expanded=True) as status:
         jobs_df, calls_df, roi_df = load_master_data()
+
+        
+        print("JOBS latest week_end:", jobs_df['week_end'].max())
+        print("CALLS latest week_end:", calls_df['week_end'].max())
+        print("ROI latest week_end:", roi_df['week_end'].max())
+        print("Expected week_end for fetch:", end)
+        print("Last full week is:", get_last_full_week(date.today()))
+
 
         try:
             jobs_df, calls_df, roi_df = fetch_and_append_week_if_needed(jobs_df, calls_df, roi_df)
