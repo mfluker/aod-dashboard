@@ -1,5 +1,5 @@
-canvas_cookies.json
 __pycache__/
-Data/
+canvas_cookies.json
+*.pyc
 .env
-.ipynb_checkpoints/
+/.streamlit/secrets.toml
