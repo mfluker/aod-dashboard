@@ -1,0 +1,9 @@
+canvas_cookies.json
+__pycache__/
+Data/
+.env
+.ipynb_checkpoints/
+.streamlit/secrets.toml
+.ipynb_checkpoints/
+.streamlit/secrets.toml
+__pycache__/
