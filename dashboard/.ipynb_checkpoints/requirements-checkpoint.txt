@@ -1,0 +1,8 @@
+dash
+pandas
+plotly
+requests
+gunicorn
+beautifulsoup4
+pyarrow
+

@@ -1,4 +1,4 @@
-import data_fetcher
+# import data_fetcher
 import math
 import re
 from datetime import datetime, date, timedelta
@@ -9,21 +9,25 @@ import plotly.graph_objects as go
 from dash import dash_table, dcc, html
 from functools import lru_cache
 
-from data_fetcher import load_jobs_data, download_conversion_report, fetch_roi
+# from data_fetcher import load_jobs_data, download_conversion_report, fetch_roi
 
 
 # Helpers
 @lru_cache(maxsize=1)
 
 def load_master_data():
-    """Read and cache the master parquet files."""
-    jobs_path = Path("MasterData/all_jobs_data.parquet")
-    calls_path = Path("MasterData/all_call_center_data.parquet")
-    roi_path = Path("MasterData/all_roi_data.parquet")
-    
-    jobs_df = pd.read_parquet(jobs_path)
+    """Read and cache the master parquet files from the parent directory."""
+    base_dir = Path(__file__).resolve().parent.parent  # <-- from dashboard/ up to AoD_Dashboard/
+    master_data_dir = base_dir / "Master_Data"
+
+    jobs_path  = master_data_dir / "all_jobs_data.parquet"
+    calls_path = master_data_dir / "all_call_center_data.parquet"
+    roi_path   = master_data_dir / "all_roi_data.parquet"
+
+    jobs_df  = pd.read_parquet(jobs_path)
     calls_df = pd.read_parquet(calls_path)
-    roi_df = pd.read_parquet(roi_path)
+    roi_df   = pd.read_parquet(roi_path)
+
     return jobs_df, calls_df, roi_df
     
 
@@ -55,54 +59,54 @@ def parquet_has_week(df: pd.DataFrame, start: str, end: str) -> bool:
     return ((df["week_start"] == start) & (df["week_end"] == end)).any()
 
 
-def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFrame, roi_df: pd.DataFrame):
-    jobs_path = Path("MasterData/all_jobs_data.parquet")
-    calls_path = Path("MasterData/all_call_center_data.parquet")
-    roi_path = Path("MasterData/all_roi_data.parquet")
+# def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFrame, roi_df: pd.DataFrame):
+#     jobs_path = Path("MasterData/all_jobs_data.parquet")
+#     calls_path = Path("MasterData/all_call_center_data.parquet")
+#     roi_path = Path("MasterData/all_roi_data.parquet")
 
-    start, end = get_last_full_week(date.today())
+#     start, end = get_last_full_week(date.today())
 
-    session = data_fetcher.get_session_with_canvas_cookie()
+#     session = data_fetcher.get_session_with_canvas_cookie()
 
-    if not parquet_has_week(jobs_df, start, end):
-        print(f"📦 Adding Jobs data for {start} – {end}...")
-        new_jobs   = data_fetcher.load_jobs_data(start, end)
-        new_jobs["week_start"] = start
-        new_jobs["week_end"] = end
-        new_jobs["ID"] = new_jobs["ID"].astype(str)
-        jobs_df = pd.concat([jobs_df, new_jobs], ignore_index=True)
-        jobs_df.to_parquet(jobs_path, index=False)
-    else:
-        print(f"✅ Jobs data for {start} – {end} already present.")
+#     if not parquet_has_week(jobs_df, start, end):
+#         print(f"📦 Adding Jobs data for {start} – {end}...")
+#         new_jobs   = data_fetcher.load_jobs_data(start, end)
+#         new_jobs["week_start"] = start
+#         new_jobs["week_end"] = end
+#         new_jobs["ID"] = new_jobs["ID"].astype(str)
+#         jobs_df = pd.concat([jobs_df, new_jobs], ignore_index=True)
+#         jobs_df.to_parquet(jobs_path, index=False)
+#     else:
+#         print(f"✅ Jobs data for {start} – {end} already present.")
 
-    if not parquet_has_week(calls_df, start, end):
-        print(f"📞 Adding Call Center data for {start} – {end}...")
-        inbound, _ = data_fetcher.download_conversion_report(start, end, include_homeshow=False)
-        outbound,_ = data_fetcher.download_conversion_report(start, end, include_homeshow=True)
+#     if not parquet_has_week(calls_df, start, end):
+#         print(f"📞 Adding Call Center data for {start} – {end}...")
+#         inbound, _ = data_fetcher.download_conversion_report(start, end, include_homeshow=False)
+#         outbound,_ = data_fetcher.download_conversion_report(start, end, include_homeshow=True)
 
-        inbound["mode"] = "inbound"
-        outbound["mode"] = "outbound"
-        for df in [inbound, outbound]:
-            df["week_start"] = start
-            df["week_end"] = end
+#         inbound["mode"] = "inbound"
+#         outbound["mode"] = "outbound"
+#         for df in [inbound, outbound]:
+#             df["week_start"] = start
+#             df["week_end"] = end
 
-        calls_df = pd.concat([calls_df, inbound, outbound], ignore_index=True)
-        calls_df.to_parquet(calls_path, index=False)
-    else:
-        print(f"✅ Call Center data for {start} – {end} already present.")
+#         calls_df = pd.concat([calls_df, inbound, outbound], ignore_index=True)
+#         calls_df.to_parquet(calls_path, index=False)
+#     else:
+#         print(f"✅ Call Center data for {start} – {end} already present.")
 
-    if not parquet_has_week(roi_df, start, end):
-        print(f"Adding ROI data for {start} – {end}...")
-        new_roi = data_fetcher.fetch_roi(start, end, session) 
-        new_roi["week_start"] = start
-        new_roi["week_end"] = end
+#     if not parquet_has_week(roi_df, start, end):
+#         print(f"Adding ROI data for {start} – {end}...")
+#         new_roi = data_fetcher.fetch_roi(start, end, session) 
+#         new_roi["week_start"] = start
+#         new_roi["week_end"] = end
 
-        roi_df = pd.concat([roi_df, new_roi], ignore_index=True)
-        roi_df.to_parquet(roi_path, index=False)
-    else:
-        print(f"✅ ROI data for {start} – {end} already present.")
+#         roi_df = pd.concat([roi_df, new_roi], ignore_index=True)
+#         roi_df.to_parquet(roi_path, index=False)
+#     else:
+#         print(f"✅ ROI data for {start} – {end} already present.")
 
-    return jobs_df, calls_df, roi_df
+#     return jobs_df, calls_df, roi_df
 
 
 def generate_reference_weeks(selected_start_date: str, df) -> dict:

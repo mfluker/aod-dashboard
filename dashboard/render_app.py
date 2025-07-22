@@ -1,4 +1,4 @@
-# testing_dashboard.ipynb
+# render_app.py
 import re
 import pandas as pd
 import plotly.express as px
@@ -10,21 +10,21 @@ import math
 import os
 from dash import Dash, dcc, html, dash_table
 from dash.dependencies import Input, Output
-from data_fetcher import *
 from dashboard_utils import *
 from datetime import datetime
+from pathlib import Path
+import sys
+from pathlib import Path
 
-# Load in Data
-MASTER_JOBS_PARQUET = Path("MasterData/all_jobs_data.parquet")
-MASTER_CALLS_PARQUET = Path("MasterData/all_call_center_data.parquet") # Need to add in Marketing
-MASTER_ROI_PARQUET = Path("MasterData/all_roi_data.parquet")
+MASTERDATA_DIR = Path("../Master_Data").resolve()
+
+MASTER_JOBS_PARQUET = MASTERDATA_DIR / "all_jobs_data.parquet"
+MASTER_CALLS_PARQUET = MASTERDATA_DIR / "all_call_center_data.parquet"
+MASTER_ROI_PARQUET = MASTERDATA_DIR / "all_roi_data.parquet"
 
 jobs_all_df = pd.read_parquet(MASTER_JOBS_PARQUET)
 calls_all_df = pd.read_parquet(MASTER_CALLS_PARQUET)
 roi_all_df = pd.read_parquet(MASTER_ROI_PARQUET)
-
-# Check if Dashboard Needs Updated Data
-# jobs_all_df, calls_all_df, roi_all_df = fetch_and_append_week_if_needed(jobs_all_df, calls_all_df, roi_all_df) # Need to add in marketing to this function
 
 
 # ─── 1. Instantiate Dash App & Layout ─────────────────────────────────────
@@ -128,10 +128,11 @@ def _update_dashboard_wrapper(selected_week, selected_franchisee):
 
 
 # ─── 3. Run ─────────────────────────────────────────────────────────────────
+# FOR TESTING LOCALLY
 # if __name__ == "__main__":
 #     app.run(debug=True, port=8058)
 
-# UNCOMMENT IF IT IS APP.PY
+# UNCOMMENT IF IT IS FOR RENDER
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))  # Render sets PORT dynamically
     app.run(host="0.0.0.0", port=port, debug=True)
