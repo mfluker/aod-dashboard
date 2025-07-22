@@ -48,7 +48,7 @@ if cookie_file and st.button("🔄 Fetch + Push Weekly Data"):
         print("JOBS latest week_end:", jobs_df['week_end'].max())
         print("CALLS latest week_end:", calls_df['week_end'].max())
         print("ROI latest week_end:", roi_df['week_end'].max())
-        print("Expected week_end for fetch:", end)
+        print("Expected week_end for fetch:", get_last_full_week(date.today())[1])
         print("Last full week is:", get_last_full_week(date.today()))
 
 
