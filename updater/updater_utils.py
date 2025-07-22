@@ -35,8 +35,8 @@ def load_master_data():
     # base_dir = Path(__file__).resolve().parent.parent  # <-- from dashboard/ up to AoD_Dashboard/
     # master_data_dir = base_dir / "Master_Data"
 
-    master_data_dir = Path(__file__).resolve().parent / "Master_Data"
-
+    master_data_dir = Path(__file__).resolve().parent.parent / "dashboard" / "Master_Data"
+    
     jobs_path  = master_data_dir / "all_jobs_data.parquet"
     calls_path = master_data_dir / "all_call_center_data.parquet"
     roi_path   = master_data_dir / "all_roi_data.parquet"
