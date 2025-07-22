@@ -3,3 +3,4 @@ canvas_cookies.json
 *.pyc
 .env
 /.streamlit/secrets.toml
+.ipynb_checkpoints/
