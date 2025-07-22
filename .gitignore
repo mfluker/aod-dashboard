@@ -4,3 +4,8 @@ canvas_cookies.json
 .env
 /.streamlit/secrets.toml
 .ipynb_checkpoints/
+.DS_Store
+*.ipynb.layout
+.ipynb_checkpoints/
+*.ipynb~*
+updater/Streamlit_Secrets_Testing.ipynb
