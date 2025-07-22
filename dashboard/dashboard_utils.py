@@ -17,8 +17,10 @@ from functools import lru_cache
 
 def load_master_data():
     """Read and cache the master parquet files from the parent directory."""
-    base_dir = Path(__file__).resolve().parent.parent  # <-- from dashboard/ up to AoD_Dashboard/
-    master_data_dir = base_dir / "Master_Data"
+    # base_dir = Path(__file__).resolve().parent.parent  # <-- from dashboard/ up to AoD_Dashboard/
+    # master_data_dir = base_dir / "Master_Data"
+
+    master_data_dir = Path(__file__).resolve().parent / "Master_Data"
 
     jobs_path  = master_data_dir / "all_jobs_data.parquet"
     calls_path = master_data_dir / "all_call_center_data.parquet"

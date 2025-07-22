@@ -15,10 +15,27 @@ from data_fetcher import load_jobs_data, download_conversion_report, fetch_roi
 # Helpers
 @lru_cache(maxsize=1)
 
+# def load_master_data():
+#     """Read and cache the master parquet files from the parent directory."""
+#     base_dir = Path(__file__).resolve().parent.parent  # <-- from dashboard/ up to AoD_Dashboard/
+#     master_data_dir = base_dir / "Master_Data"
+
+#     jobs_path  = master_data_dir / "all_jobs_data.parquet"
+#     calls_path = master_data_dir / "all_call_center_data.parquet"
+#     roi_path   = master_data_dir / "all_roi_data.parquet"
+
+#     jobs_df  = pd.read_parquet(jobs_path)
+#     calls_df = pd.read_parquet(calls_path)
+#     roi_df   = pd.read_parquet(roi_path)
+
+#     return jobs_df, calls_df, roi_df
+
 def load_master_data():
     """Read and cache the master parquet files from the parent directory."""
-    base_dir = Path(__file__).resolve().parent.parent  # <-- from dashboard/ up to AoD_Dashboard/
-    master_data_dir = base_dir / "Master_Data"
+    # base_dir = Path(__file__).resolve().parent.parent  # <-- from dashboard/ up to AoD_Dashboard/
+    # master_data_dir = base_dir / "Master_Data"
+
+    master_data_dir = Path(__file__).resolve().parent / "Master_Data"
 
     jobs_path  = master_data_dir / "all_jobs_data.parquet"
     calls_path = master_data_dir / "all_call_center_data.parquet"
@@ -65,7 +82,8 @@ def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFram
     # roi_path = Path("MasterData/all_roi_data.parquet")
 
     # Robust path pointing to top-level Master_Data directory
-    base_dir = Path(__file__).resolve().parent.parent / "Master_Data"
+    base_dir = Path(__file__).resolve().parent.parent / "dashboard" / "Master_Data"
+    
     jobs_path = base_dir / "all_jobs_data.parquet"
     calls_path = base_dir / "all_call_center_data.parquet"
     roi_path = base_dir / "all_roi_data.parquet"

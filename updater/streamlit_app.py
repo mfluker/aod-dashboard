@@ -62,15 +62,15 @@ if cookie_file and st.button("🔄 Fetch + Push Weekly Data"):
                 subprocess.run(["git", "clone", remote_url, str(tmp_path)], check=True)
         
                 status.update(label="📂 Copying updated Parquet files...")
-                dest = tmp_path / "Master_Data"
+                dest = tmp_path / "dashboard" / "Master_Data"
                 dest.mkdir(exist_ok=True)
-                for f in Path("Master_Data").glob("*.parquet"):
+                for f in Path("dashboard/Master_Data").glob("*.parquet"):
                     shutil.copy(f, dest / f.name)
         
                 subprocess.run(["git", "config", "--global", "user.name", "AoD Updater Bot"], check=True)
                 subprocess.run(["git", "config", "--global", "user.email", "updater@app.aod"], check=True)
         
-                subprocess.run(["git", "add", "Master_Data/*.parquet"], cwd=tmp_path, check=True)
+                subprocess.run(["git", "add", "dashboard/Master_Data/*.parquet"], cwd=tmp_path, check=True)
                 
                 # CHECK if there's anything to commit
                 result = subprocess.run(

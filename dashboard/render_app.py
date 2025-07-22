@@ -16,7 +16,7 @@ from pathlib import Path
 import sys
 from pathlib import Path
 
-MASTERDATA_DIR = Path("../Master_Data").resolve()
+MASTERDATA_DIR = MASTERDATA_DIR = Path("Master_Data")
 
 MASTER_JOBS_PARQUET = MASTERDATA_DIR / "all_jobs_data.parquet"
 MASTER_CALLS_PARQUET = MASTERDATA_DIR / "all_call_center_data.parquet"
