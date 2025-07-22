@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: aod-dashboard
-    env: python
-    plan: free
-    buildCommand: pip install -r dashboard/requirements.txt
-    startCommand: python render_app.py
-    workingDir: dashboard
