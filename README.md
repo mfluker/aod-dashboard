@@ -1,124 +1,54 @@
 # 📊 Art of Drawers Dashboard
 
-This repository powers **Art of Drawers' internal analytics tools**, including a dynamic Dash dashboard and a secure Streamlit app for updating weekly data from Canvas.
+This repository powers **Art of Drawers' internal analytics dashboard**, featuring a dynamic Dash dashboard and a secure Streamlit app for updating weekly data automatically from Canvas.
 
 ---
 
-## 🔧 Repo Structure
+## ⚡ How This Works
 
-```
-AoD_Dashboard/
-├── dashboard/              # Dash app deployed via Render
-│   ├── render_app.py       # Main dashboard entrypoint
-│   ├── dashboard_utils.py  # All core logic & visuals
-│   ├── requirements.txt    # Dash app dependencies
-│   └── render.yaml         # Render deployment config
-│
-├── updater/                # Streamlit app for fetching + pushing data
-│   ├── streamlit_app.py    # Streamlit entrypoint
-│   ├── requirements.txt    # Streamlit-specific dependencies
-│
-├── MasterData/             # Central location for Parquet datasets
-│   ├── all_jobs_data.parquet
-│   ├── all_call_center_data.parquet
-│   └── all_roi_data.parquet
-│
-└── data_fetcher.py         # Secure API logic for retrieving Canvas data
-```
+1. **Update:** Run the updater at: [https://aod-dashboard-updater.streamlit.app/](https://aod-dashboard-updater.streamlit.app/)
+2. **Push:** Updater automatically pushes the new data to GitHub, which then triggers Render to auto‑redeploy the dashboard.
+3. **Deploy & View:** Wait 3 minutes, then view the live dashboard at: [https://aod-dashboard.onrender.com/](https://aod-dashboard.onrender.com/)
 
 ---
 
-## 🖥️ The Dashboard (`dashboard/`)
+## 🚀 Quick Start
 
-### Features
-- Weekly breakdown of job pipeline by order type and status
-- Call center metrics with YoY and WoW changes
-- Inbound/Outbound performance tables
-- ROI card metrics (Leads, Revenue per Appt, Ad Spend)
-- Franchisee filtering
+Open these **3 central links** for a seamless weekly update:
 
-### How It Works
-- Pulls data **only** from `MasterData/*.parquet`
-- **Never contacts Canvas directly**
-- Automatically redeploys on Render when new data is pushed to GitHub
+* **Updater App**: [https://aod-dashboard-updater.streamlit.app/](https://aod-dashboard-updater.streamlit.app/)
+* **GitHub Repo**: [https://github.com/mfluker/aod-dashboard](https://github.com/mfluker/aod-dashboard)
+* **Dashboard**: [https://aod-dashboard.onrender.com/](https://aod-dashboard.onrender.com/)
 
 ---
 
-## 🔁 The Updater (`updater/`)
+### Step 1: Run the Updater
 
-### Purpose
-Fetch new weekly data from Canvas, append it to existing `.parquet` files, and commit + push changes to GitHub — which automatically triggers a dashboard redeploy via Render.
+1. Open the **Updater App** URL above.
+2. If it hasn’t loaded, click the **red "Load Updater"** button (may take up to 30 seconds).
+3. Follow instructions on the updater site:
 
-### How It Works
-1. Upload your `canvas_cookies.json` in the Streamlit UI
-2. App validates the cookie
-3. Pulls any **missing weeks** of data using `data_fetcher.py`
-4. Appends new rows to files in `MasterData/`
-5. Pushes updated `.parquet` files to the GitHub repo using your `GH_TOKEN`
-
----
-
-## 📁 MasterData Directory
-
-All final `.parquet` files live in:
-
-```
-AoD_Dashboard/MasterData/
-```
-
-These are the only files used by the dashboard:
-- `all_jobs_data.parquet`
-- `all_call_center_data.parquet`
-- `all_roi_data.parquet`
-
-This directory is **only modified by the Streamlit updater**, not the dashboard.
+   * Upload your `canvas_cookies.json`.
+   * The app checks for missing weeks in `MasterData/*.parquet`.
+   * If needed, it runs `data_fetcher.py` (\~1 minute) and pushes updates to GitHub.
+4. Errors are usually due to the cookie file. Regenerate `canvas_cookies.json` and retry.
 
 ---
 
-## 🚀 Deploying to Render
+### Step 2: GitHub Push & Render Redeploy
 
-Render uses the `render.yaml` located in `dashboard/`:
-
-```yaml
-services:
-  - type: web
-    name: aod-dashboard
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python render_app.py
-    plan: free
-```
-
-Make sure that:
-- The `dashboard/requirements.txt` file includes all Dash dependencies
-- Your `MasterData/` folder is committed and kept in the root (`AoD_Dashboard/MasterData`)
-- Any updates from the updater are committed to GitHub to trigger redeploys
+* After the updater pushes to **GitHub**, Render detects changes automatically.
+* Redeployment takes **\~3 minutes**.
+* Seeing a **502 Bad Gateway?** Wait 3 minutes, then paste the **Dashboard** URL into your browser.
 
 ---
 
-## 🧠 Notes & Best Practices
+### Step 3: View the Dashboard
 
-- Only the updater should write to `MasterData/`
-- The dashboard never fetches live Canvas data
-- You do **not** need cookie or GitHub secrets in your Render deployment — it's read-only
-- Keep updater secrets in `.streamlit/secrets.toml`
+* Visit **Dashboard** to see the latest data:
 
----
-
-## 🪪 Auth Setup for Updater
-
-In `.streamlit/secrets.toml` (not tracked by Git), include:
-
-```toml
-GH_TOKEN = "your_personal_token"
-GH_REPO = "mfluker/aod-dashboard"
-GH_USERNAME = "mfluker"
-```
+  * [https://aod-dashboard.onrender.com/](https://aod-dashboard.onrender.com/)
 
 ---
 
-## ✅ You're Ready!
-
-- Run the Streamlit updater weekly
-- Push to GitHub from there
-- Let Render auto-refresh your dashboard
+That’s it—1 update, 1 push, 1 view. Happy reporting!
