@@ -6,9 +6,9 @@ This repository powers **Art of Drawers' internal analytics dashboard**, featuri
 
 ## ⚡ How This Works
 
-1. **Update:** Run the updater at: [https://aod-dashboard-updater.streamlit.app/](https://aod-dashboard-updater.streamlit.app/)
-2. **Push:** Updater automatically pushes the new data to GitHub, which then triggers Render to auto‑redeploy the dashboard.
-3. **Deploy & View:** Wait 3 minutes, then view the live dashboard at: [https://aod-dashboard.onrender.com/](https://aod-dashboard.onrender.com/)
+1. **Update:** Run the Data Updater
+2. **Push:** Updater automatically pushes the new data to GitHub, which then triggers Render to redeploy the dashboard.
+3. **Deploy & View:** Wait 3 minutes, then view the live dashboard
 
 ---
 
@@ -38,14 +38,15 @@ Open these **3 central links** for a seamless weekly update:
 ### Step 2: GitHub Push & Render Redeploy
 
 * After the updater pushes to **GitHub**, Render detects changes automatically.
+  * If run successfully, the MasterData file in the GitHub Repo should show that a update has been made   
 * Redeployment takes **\~3 minutes**.
-* Seeing a **502 Bad Gateway?** Wait 3 minutes, then paste the **Dashboard** URL into your browser.
+* Seeing a **502 Bad Gateway?** Wait 3 minutes, then paste the **Dashboard URL** into your browser.
 
 ---
 
 ### Step 3: View the Dashboard
 
-* Visit **Dashboard** to see the latest data:
+* Visit **Dashboard** to see the latest data at the URL below:
 
   * [https://aod-dashboard.onrender.com/](https://aod-dashboard.onrender.com/)
 
