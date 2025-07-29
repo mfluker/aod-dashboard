@@ -14,10 +14,9 @@ This repository powers **Art of Drawers' internal analytics dashboard**, featuri
 
 ## 🚀 Quick Start
 
-Open these **3 central links** for a seamless weekly update:
+Open these **2 central links** for a seamless weekly update:
 
 * **Updater App**: [https://aod-dashboard-updater.streamlit.app/](https://aod-dashboard-updater.streamlit.app/)
-* **GitHub Repo**: [https://github.com/mfluker/aod-dashboard](https://github.com/mfluker/aod-dashboard)
 * **Dashboard**: [https://aod-dashboard.onrender.com/](https://aod-dashboard.onrender.com/)
 
 ---
