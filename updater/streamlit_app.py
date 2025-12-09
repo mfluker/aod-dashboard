@@ -309,19 +309,55 @@ if valid_cookies:
                     earliest = pd.to_datetime(calls_df["week_start"]).min().strftime("%m/%d/%Y")
                     latest_end = calls_df['week_end'].max()
                     st.write(f"• Data range: {earliest} to {latest_end}")
+
+                    # Count unique weeks
+                    unique_weeks = calls_df[['week_start', 'week_end']].drop_duplicates()
+                    st.write(f"• Unique weeks in data: {len(unique_weeks)}")
                 else:
                     st.write("• No existing data")
                 st.write(f"• Last full week available: {get_last_full_week(date.today())[1]}")
 
-                # Fetch and append new data if needed
+                # Check for missing weeks BEFORE fetching
+                from updater_utils import get_all_missing_weeks
                 status.update(label="🔍 Checking for ALL missing weeks (including historical gaps)...")
-                jobs_df, calls_df, roi_df = fetch_and_append_week_if_needed(jobs_df, calls_df, roi_df)
-                
-                st.markdown("""
-                <div class="success-box">
-                    ✅ Parquet files updated successfully!
-                </div>
-                """, unsafe_allow_html=True)
+                missing_weeks = get_all_missing_weeks(calls_df)
+
+                if missing_weeks:
+                    st.warning(f"⚠️ Found **{len(missing_weeks)}** missing week(s) that will be backfilled:")
+                    # Show first 5 and last 5 if there are many
+                    if len(missing_weeks) <= 10:
+                        for start, end in missing_weeks:
+                            st.write(f"  • {start} – {end}")
+                    else:
+                        for start, end in missing_weeks[:5]:
+                            st.write(f"  • {start} – {end}")
+                        st.write(f"  ... ({len(missing_weeks) - 10} more weeks) ...")
+                        for start, end in missing_weeks[-5:]:
+                            st.write(f"  • {start} – {end}")
+                    st.write(f"\n🔄 This will fetch Call Center and ROI data for all {len(missing_weeks)} weeks...")
+                else:
+                    st.success("✅ No missing weeks detected! All historical data is complete.")
+
+                # Fetch and append new data if needed
+                status.update(label=f"📦 Fetching {len(missing_weeks)} missing week(s)..." if missing_weeks else "✅ Data up to date")
+                jobs_df_updated, calls_df_updated, roi_df_updated = fetch_and_append_week_if_needed(jobs_df, calls_df, roi_df)
+
+                # Show what was done
+                if missing_weeks:
+                    new_weeks_count = len(calls_df_updated[['week_start', 'week_end']].drop_duplicates()) - len(unique_weeks)
+                    st.markdown(f"""
+                    <div class="success-box">
+                        ✅ Successfully fetched {len(missing_weeks)} missing week(s)!<br>
+                        📊 Total weeks now: {len(calls_df_updated[['week_start', 'week_end']].drop_duplicates())} (added {new_weeks_count})
+                    </div>
+                    """, unsafe_allow_html=True)
+                    jobs_df, calls_df, roi_df = jobs_df_updated, calls_df_updated, roi_df_updated
+                else:
+                    st.markdown("""
+                    <div class="info-box">
+                        ℹ️ No new data to fetch - all weeks are already present!
+                    </div>
+                    """, unsafe_allow_html=True)
 
                 # --- COMMIT AND PUSH TO GITHUB ---
                 status.update(label="🛠 Cloning dashboard repo...")
