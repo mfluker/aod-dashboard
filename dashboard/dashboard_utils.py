@@ -401,6 +401,203 @@ def generate_week_options_from_parquet(df):
 #     return fig
 
 
+def build_call_center_line_chart(calls_all_df, selected_metric="touches"):
+    """
+    Build a line chart showing Call Center metrics over all available weeks.
+    selected_metric: "touches" or "design_appts"
+    """
+    # Get data for outbound (for both metrics)
+    outbound_data = calls_all_df[calls_all_df["mode"] == "outbound"].copy()
+
+    # Group by week and sum the Totals row values
+    weekly_data = []
+    for (week_start, week_end), group in outbound_data.groupby(["week_start", "week_end"]):
+        totals_row = group[group["Call Center Rep"] == "Totals"]
+        if not totals_row.empty:
+            touches = int(totals_row["Outbound Communication Count"].iloc[0])
+            design_appts = int(totals_row["Total Booked"].iloc[0])
+            weekly_data.append({
+                "week_start": week_start,
+                "week_end": week_end,
+                "touches": touches,
+                "design_appts": design_appts
+            })
+
+    # Convert to DataFrame and sort by date
+    df = pd.DataFrame(weekly_data)
+    if df.empty:
+        # Return empty figure if no data
+        return go.Figure().update_layout(
+            title="No data available",
+            font=dict(family="Segoe UI, sans-serif", color="#2C3E70")
+        )
+
+    df["week_start_dt"] = pd.to_datetime(df["week_start"])
+    df = df.sort_values("week_start_dt")
+
+    # Create week labels
+    df["week_label"] = df.apply(
+        lambda row: f"{pd.to_datetime(row['week_start']).strftime('%m/%d')} – {pd.to_datetime(row['week_end']).strftime('%m/%d')}",
+        axis=1
+    )
+
+    # Select metric
+    if selected_metric == "touches":
+        y_values = df["touches"]
+        title = "Touches (Proxy) Over Time"
+        y_title = "Touch Count"
+        color = "#2C3E70"
+    else:  # design_appts
+        y_values = df["design_appts"]
+        title = "Design Appointments Scheduled Over Time"
+        y_title = "Appointments Count"
+        color = "#2C3E70"
+
+    # Create figure
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df["week_label"],
+        y=y_values,
+        mode="lines+markers",
+        line=dict(color=color, width=3),
+        marker=dict(size=8, color=color),
+        hovertemplate="<b>%{x}</b><br>Count: %{y}<extra></extra>"
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text=title,
+            font=dict(family="Segoe UI, sans-serif", size=18, color="#2C3E70")
+        ),
+        xaxis_title="Week",
+        yaxis_title=y_title,
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        font=dict(family="Segoe UI, sans-serif", size=14, color="#2C3E70"),
+        hovermode="x unified",
+        height=400,
+        margin=dict(t=60, b=60, l=60, r=40)
+    )
+
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="#e1e8ed",
+        showline=True,
+        linecolor="#2C3E70",
+        tickangle=-45
+    )
+
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor="#e1e8ed",
+        showline=True,
+        linecolor="#2C3E70"
+    )
+
+    return fig
+
+
+def build_marketing_line_chart(roi_all_df, selected_metric="amount_invested"):
+    """
+    Build a line chart showing Marketing metrics over all available weeks.
+    selected_metric: "amount_invested", "leads_generated", or "revenue_per_appt"
+    """
+    # Get all ROI data
+    roi_data = roi_all_df.copy()
+
+    if roi_data.empty:
+        return go.Figure().update_layout(
+            title="No data available",
+            font=dict(family="Segoe UI, sans-serif", color="#2C3E70")
+        )
+
+    # Sort by week_start
+    roi_data["week_start_dt"] = pd.to_datetime(roi_data["week_start"])
+    roi_data = roi_data.sort_values("week_start_dt")
+
+    # Create week labels
+    roi_data["week_label"] = roi_data.apply(
+        lambda row: f"{pd.to_datetime(row['week_start']).strftime('%m/%d')} – {pd.to_datetime(row['week_end']).strftime('%m/%d')}",
+        axis=1
+    )
+
+    # Helper to extract numeric value
+    import re
+    def extract_numeric(val):
+        if pd.isna(val):
+            return None
+        if isinstance(val, (int, float)):
+            return float(val)
+        cleaned = re.sub(r"[^\d\.\-]", "", str(val))
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+
+    # Select metric and prepare data
+    if selected_metric == "amount_invested":
+        roi_data["value"] = roi_data["Amount Invested"].apply(extract_numeric)
+        title = "Amount Invested Over Time"
+        y_title = "Amount ($)"
+        hover_format = "$%{y:,.2f}"
+    elif selected_metric == "leads_generated":
+        roi_data["value"] = roi_data["# of Leads"].apply(extract_numeric)
+        title = "Leads Generated Over Time"
+        y_title = "Number of Leads"
+        hover_format = "%{y}"
+    else:  # revenue_per_appt
+        roi_data["value"] = roi_data["Revenue Per Appt"].apply(extract_numeric)
+        title = "Revenue Per Appointment Over Time"
+        y_title = "Revenue ($)"
+        hover_format = "$%{y:,.2f}"
+
+    # Filter out null values
+    roi_data = roi_data[roi_data["value"].notna()]
+
+    # Create figure
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=roi_data["week_label"],
+        y=roi_data["value"],
+        mode="lines+markers",
+        line=dict(color="#2C3E70", width=3),
+        marker=dict(size=8, color="#2C3E70"),
+        hovertemplate=f"<b>%{{x}}</b><br>{hover_format}<extra></extra>"
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text=title,
+            font=dict(family="Segoe UI, sans-serif", size=18, color="#2C3E70")
+        ),
+        xaxis_title="Week",
+        yaxis_title=y_title,
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        font=dict(family="Segoe UI, sans-serif", size=14, color="#2C3E70"),
+        hovermode="x unified",
+        height=400,
+        margin=dict(t=60, b=60, l=60, r=40)
+    )
+
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="#e1e8ed",
+        showline=True,
+        linecolor="#2C3E70",
+        tickangle=-45
+    )
+
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor="#e1e8ed",
+        showline=True,
+        linecolor="#2C3E70"
+    )
+
+    return fig
+
+
 def build_call_center_metrics(outbound_df, proxy_last_week=None, booked_last_week=None):
     """
     Reads the Totals row in outbound_df and returns
@@ -601,11 +798,17 @@ def update_dashboard(selected_week, selected_franchisee="All"):
         & (calls_all_df["mode"] == "inbound")
     ].drop(columns=["week_start", "week_end", "mode"])
 
+    # Filter out rows where Inbound Help Rate is "nan%"
+    inbound_df = inbound_df[inbound_df["Inbound Help Rate (%)"] != "nan%"]
+
     outbound_df = calls_all_df[
         (calls_all_df["week_start"] == start_csv)
         & (calls_all_df["week_end"] == end_csv)
         & (calls_all_df["mode"] == "outbound")
     ].drop(columns=["week_start", "week_end", "mode"])
+
+    # Filter out rows where Outbound Help Rate is "nan%"
+    outbound_df = outbound_df[outbound_df["Outbound Help Rate (%)"] != "nan%"]
 
     # Defensive: skip if 1-wk-ago not available
     if "1 week ago" not in reference_weeks:
@@ -870,6 +1073,55 @@ def update_dashboard(selected_week, selected_franchisee="All"):
                         "marginTop": "16px",
                     },
                     children=metrics_children,
+                ),
+                # Line Chart Toggle Button
+                html.Div(
+                    style={"textAlign": "center", "marginBottom": "20px"},
+                    children=[
+                        html.Button(
+                            "📈 Show Trend Chart",
+                            id="cc-chart-toggle",
+                            n_clicks=0,
+                            style={
+                                "backgroundColor": "#2C3E70",
+                                "color": "white",
+                                "border": "none",
+                                "padding": "10px 20px",
+                                "fontSize": "14px",
+                                "borderRadius": "4px",
+                                "cursor": "pointer",
+                                "fontFamily": "Segoe UI, sans-serif"
+                            }
+                        )
+                    ]
+                ),
+                # Line Chart Section (hidden by default)
+                html.Div(
+                    id="cc-chart-container",
+                    style={"display": "none", "marginBottom": "30px"},
+                    children=[
+                        html.Div(
+                            style={"textAlign": "center", "marginBottom": "16px"},
+                            children=[
+                                dcc.RadioItems(
+                                    id="cc-metric-selector",
+                                    options=[
+                                        {"label": "  Touches (Proxy)", "value": "touches"},
+                                        {"label": "  Design Appointments", "value": "design_appts"}
+                                    ],
+                                    value="touches",
+                                    inline=True,
+                                    style={"fontFamily": "Segoe UI, sans-serif", "fontSize": "14px"},
+                                    labelStyle={"marginRight": "20px", "cursor": "pointer"}
+                                )
+                            ]
+                        ),
+                        dcc.Graph(
+                            id="cc-line-chart",
+                            figure=build_call_center_line_chart(calls_all_df, "touches"),
+                            config={"displayModeBar": False}
+                        )
+                    ]
                 ),
                 # Two tables
                 html.Div(
@@ -1149,10 +1401,60 @@ def update_dashboard(selected_week, selected_franchisee="All"):
                     },
                     children=cards,
                 ),
+                # Line Chart Toggle Button
+                html.Div(
+                    style={"textAlign": "center", "marginBottom": "20px"},
+                    children=[
+                        html.Button(
+                            "📈 Show Trend Chart",
+                            id="mkt-chart-toggle",
+                            n_clicks=0,
+                            style={
+                                "backgroundColor": "#2C3E70",
+                                "color": "white",
+                                "border": "none",
+                                "padding": "10px 20px",
+                                "fontSize": "14px",
+                                "borderRadius": "4px",
+                                "cursor": "pointer",
+                                "fontFamily": "Segoe UI, sans-serif"
+                            }
+                        )
+                    ]
+                ),
+                # Line Chart Section (hidden by default)
+                html.Div(
+                    id="mkt-chart-container",
+                    style={"display": "none", "marginBottom": "30px"},
+                    children=[
+                        html.Div(
+                            style={"textAlign": "center", "marginBottom": "16px"},
+                            children=[
+                                dcc.RadioItems(
+                                    id="mkt-metric-selector",
+                                    options=[
+                                        {"label": "  Amount Invested", "value": "amount_invested"},
+                                        {"label": "  Leads Generated", "value": "leads_generated"},
+                                        {"label": "  Revenue Per Appointment", "value": "revenue_per_appt"}
+                                    ],
+                                    value="amount_invested",
+                                    inline=True,
+                                    style={"fontFamily": "Segoe UI, sans-serif", "fontSize": "14px"},
+                                    labelStyle={"marginRight": "20px", "cursor": "pointer"}
+                                )
+                            ]
+                        ),
+                        dcc.Graph(
+                            id="mkt-line-chart",
+                            figure=build_marketing_line_chart(roi_df, "amount_invested"),
+                            config={"displayModeBar": False}
+                        )
+                    ]
+                ),
             ],
         ),
 
-                
+
     ]
     #     )
     # ]

@@ -131,6 +131,50 @@ def _update_dashboard_wrapper(selected_week):
     return update_dashboard(selected_week, selected_franchisee="All")
 
 
+# Call Center Chart Toggle Callback
+@app.callback(
+    [Output("cc-chart-container", "style"),
+     Output("cc-chart-toggle", "children")],
+    Input("cc-chart-toggle", "n_clicks")
+)
+def toggle_cc_chart(n_clicks):
+    if n_clicks % 2 == 1:  # Odd clicks = show chart
+        return {"display": "block", "marginBottom": "30px"}, "📉 Hide Trend Chart"
+    else:  # Even clicks = hide chart
+        return {"display": "none", "marginBottom": "30px"}, "📈 Show Trend Chart"
+
+
+# Call Center Metric Selector Callback
+@app.callback(
+    Output("cc-line-chart", "figure"),
+    Input("cc-metric-selector", "value")
+)
+def update_cc_chart(selected_metric):
+    return build_call_center_line_chart(calls_all_df, selected_metric)
+
+
+# Marketing Chart Toggle Callback
+@app.callback(
+    [Output("mkt-chart-container", "style"),
+     Output("mkt-chart-toggle", "children")],
+    Input("mkt-chart-toggle", "n_clicks")
+)
+def toggle_mkt_chart(n_clicks):
+    if n_clicks % 2 == 1:  # Odd clicks = show chart
+        return {"display": "block", "marginBottom": "30px"}, "📉 Hide Trend Chart"
+    else:  # Even clicks = hide chart
+        return {"display": "none", "marginBottom": "30px"}, "📈 Show Trend Chart"
+
+
+# Marketing Metric Selector Callback
+@app.callback(
+    Output("mkt-line-chart", "figure"),
+    Input("mkt-metric-selector", "value")
+)
+def update_mkt_chart(selected_metric):
+    return build_marketing_line_chart(roi_all_df, selected_metric)
+
+
 # ─── 3. Run ─────────────────────────────────────────────────────────────────
 # FOR TESTING LOCALLY
 # if __name__ == "__main__":
