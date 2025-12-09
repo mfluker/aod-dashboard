@@ -28,8 +28,9 @@ roi_all_df = pd.read_parquet(MASTER_ROI_PARQUET)
 
 
 # ─── 1. Instantiate Dash App & Layout ─────────────────────────────────────
-all_franchisees = ["All"] + sorted(jobs_all_df["Franchisee"].dropna().unique())
-week_options = generate_week_options_from_parquet(jobs_all_df)
+# JOBS REMOVED - using calls_all_df for week options instead
+# all_franchisees = ["All"] + sorted(jobs_all_df["Franchisee"].dropna().unique())
+week_options = generate_week_options_from_parquet(calls_all_df)
 
 app = Dash(__name__, suppress_callback_exceptions=True)
 
@@ -87,16 +88,17 @@ app.layout = html.Div(
                         "border": "1px solid #2C3E70",
                     },
                 ),
-                # HIDDEN FRANCHISEE SELECTOR (so the callback can hook into it)
-                dcc.Dropdown(
-                    id="franchisee-selector",
-                    options=[{"label": f, "value": f} for f in all_franchisees],
-                    value="All",
-                    clearable=False,
-                    style={
-                        "display": "none"
-                    },  # ← keep it invisible until your update_dashboard renders the real one
-                ),
+                # FRANCHISEE SELECTOR REMOVED - JOBS FEATURE REMOVED FROM DASHBOARD
+                # # HIDDEN FRANCHISEE SELECTOR (so the callback can hook into it)
+                # dcc.Dropdown(
+                #     id="franchisee-selector",
+                #     options=[{"label": f, "value": f} for f in all_franchisees],
+                #     value="All",
+                #     clearable=False,
+                #     style={
+                #         "display": "none"
+                #     },  # ← keep it invisible until your update_dashboard renders the real one
+                # ),
             ],
         ),
         # Franchisee selector + loading wrapper
@@ -121,10 +123,12 @@ app.layout = html.Div(
 @app.callback(
     Output("dashboard-content", "children"),
     Input("date-selector", "value"),
-    Input("franchisee-selector", "value"),
+    # FRANCHISEE INPUT REMOVED - JOBS FEATURE REMOVED FROM DASHBOARD
+    # Input("franchisee-selector", "value"),
 )
-def _update_dashboard_wrapper(selected_week, selected_franchisee):
-    return update_dashboard(selected_week, selected_franchisee)
+def _update_dashboard_wrapper(selected_week):
+    # Always pass "All" for selected_franchisee (not used anymore)
+    return update_dashboard(selected_week, selected_franchisee="All")
 
 
 # ─── 3. Run ─────────────────────────────────────────────────────────────────

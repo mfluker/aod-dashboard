@@ -289,19 +289,19 @@ if uploaded_cookie:
 # --- FETCH AND PUSH SECTION ---
 if valid_cookies:
     st.markdown("## Update Your Dashboard Data")
-    
+
     st.markdown("""
     <div class="info-section">
         <strong>Ready to update!</strong> This will fetch the latest weekly data and push it to your GitHub dashboard repository.
     </div>
     """, unsafe_allow_html=True)
-    
+
     if st.button("🔄 Fetch + Push Weekly Data", type="primary"):
         with st.status("📦 Fetching new data if needed...", expanded=True) as status:
             try:
                 # Load existing data
                 jobs_df, calls_df, roi_df = load_master_data()
-                
+
                 # Debug information
                 st.write("📊 Current data status:")
                 st.write(f"• JOBS latest week_end: {jobs_df['week_end'].max()}")

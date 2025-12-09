@@ -196,9 +196,10 @@ def percent_to_color(delta: float | None) -> str:
         return "#b71c1c"  # dark red
 
 
-def generate_week_options_from_parquet(jobs_df):
+def generate_week_options_from_parquet(df):
+    """Generate week options from any DataFrame with week_start/week_end columns"""
     weeks = (
-        jobs_df[["week_start", "week_end"]]
+        df[["week_start", "week_end"]]
         .drop_duplicates()
         .sort_values("week_start", ascending=False)
     )
@@ -213,201 +214,191 @@ def generate_week_options_from_parquet(jobs_df):
 
 
 # Builders
-def make_status_figure(jobs_df: pd.DataFrame, selected_franchisee: str, historical_lookup: dict) -> go.Figure:
-    """
-    Build and return the stacked-bar + totals figure for the given franchisee.
-    """
-
-    status_order = [
-        "Measurement Appointment Scheduled",
-        "Measurement Approved",
-        "Submitted to Manufacturing Partner",
-        "Order Shipped",
-        "Order Received",
-        "Install Scheduled",
-        "Installed",
-        "Complete",
-    ]
-
-    # 1) Filter
-    df_f = (
-        jobs_df
-        if selected_franchisee == "All"
-        else jobs_df[jobs_df["Franchisee"] == selected_franchisee]
-    )
-
-    # 2) Aggregate
-    grouped = (
-        df_f.groupby(["Status", "Order Type"], observed=False)
-        .agg(Count=("ID", "nunique"))
-        .reset_index()
-    )
-    grouped["Status"] = pd.Categorical(
-        grouped["Status"], categories=status_order, ordered=True
-    )
-
-    # 3) Fill missing combos
-    order_types = ["New", "Claim", "Reorder"]
-    combos = pd.MultiIndex.from_product(
-        [status_order, order_types], names=["Status", "Order Type"]
-    )
-    grouped = (
-        grouped.set_index(["Status", "Order Type"])
-        .reindex(combos, fill_value=0)
-        .reset_index()
-    )
-
-    # 4) Compute totals
-    totals = (
-        grouped.groupby("Status", observed=False)["Count"]
-        .sum()
-        .reindex(status_order)
-        .reset_index()
-    )
-    raw_max = int(totals["Count"].max()) if not totals.empty else 0
-    top = math.ceil(raw_max / 5) * 5 * 1.1 if raw_max % 5 else raw_max * 1.1
-    top = int(math.ceil(top))
-
-    # 5) Build manually with go.Figure()
-    fig = go.Figure()
-
-    bar_colors = {"New": "#2C3E70", "Claim": "#a1c4bd", "Reorder": "#bbbfbf"}
-
-    for ot in order_types:
-        df_trace = grouped[grouped["Order Type"] == ot]
-        fig.add_trace(
-            go.Bar(
-                x=df_trace["Status"],
-                y=df_trace["Count"],
-                name=ot,
-                marker_color=bar_colors.get(ot, "#888"),
-                customdata=[[ot]] * len(df_trace),
-                hovertemplate="<b>%{x}</b><br>Type: %{customdata[0]}<br>Count: %{y}<extra></extra>",
-                uid=ot,
-                hoverlabel=dict(
-                    bgcolor=bar_colors.get(ot, "#888"),
-                    font_size=14,
-                    font_color="white",  # white looks best on these
-                ),
-            )
-        )
-
-    hover_texts = []
-    for s, c in zip(totals["Status"], totals["Count"]):
-        if selected_franchisee == "All":
-            prev = historical_lookup.get(s)
-            # if prev is None:
-            #     hover_texts.append(
-            #         f"<b>{s}</b><br><b>1 Wk Ago:</b> –<extra></extra>"
-            #     )
-            # else:
-            #     delta_color = percent_to_color(get_delta_percent(c, prev))
-            #     delta_text = format_with_change(c, prev).split()[-1]
-            #     hover_texts.append(
-            #         f"<b>{s}</b><br><b>1 Wk Ago:</b> {int(prev)} "
-            #         f"<span style='color:{delta_color}'>{delta_text}</span><extra></extra>"
-            #     )
-            if prev is None or prev == 0:
-                hover_texts.append(f"<b>{s}</b><br><b>1 Wk Ago:</b> –<extra></extra>")
-            else:
-                delta = get_delta_percent(c, prev)
-                delta_text = format_with_change(c, prev).split()[-1]
-                color = percent_to_color(delta)
-                hover_texts.append(
-                    f"<b>{s}</b><br><b>1 Wk Ago:</b> {int(prev)} "
-                    f"<span style='color:{color}'>{delta_text}</span><extra></extra>"
-                )
-        else:
-            hover_texts.append(f"<b>{s}</b><br><b>Count:</b> {int(c)}<extra></extra>")
-
-    # 6) Add total labels as pixel-aligned annotations
-    for x, y, text in zip(totals["Status"], totals["Count"], totals["Count"]):
-        fig.add_annotation(
-            x=x,
-            y=y,
-            text=str(int(text)),
-            showarrow=False,
-            yanchor="bottom",
-            yshift=2,  # shift label 2 pixels above bar
-            font=dict(color="#2C3E70", size=14),
-            align="center",
-        )
-
-    if selected_franchisee == "All":
-        fig.add_trace(
-            go.Scatter(
-                x=totals["Status"],
-                y=totals["Count"] + 4,  # ← ALIGN to true count, not offset
-                mode="markers",
-                marker=dict(size=30, color="rgba(0,0,0,0)"),  # transparent
-                hovertemplate=hover_texts,
-                showlegend=False,
-                hoverlabel=dict(
-                    bgcolor="white",
-                    font_size=14,
-                    font_color="black",
-                    bordercolor="#2C3E70",
-                ),
-            )
-        )
-
-    fig.update_layout(
-        uirevision="static-axes",
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        hoverlabel=dict(
-            bgcolor="white",  # Background color
-            font_size=14,  # Font size
-            font_color="black",  # Text color
-            bordercolor="#2C3E70",  # Optional: adds a subtle border for separation
-        ),
-        barmode="stack",
-        height=500,
-        margin=dict(t=100, b=30, l=40, r=40),
-        font=dict(
-            family="Segoe UI, sans-serif", size=14, color="#2C3E70"
-        ),  # Global font for axis, legend, etc.
-        legend=dict(orientation="h", y=1.05, x=1, xanchor="right"),
-        title=dict(
-            text=f"Project Status by Order Type — {selected_franchisee}",
-            font=dict(
-                family="Segoe UI, sans-serif",
-                size=20,  # Match H1-style prominence
-                color="#2C3E70",
-            ),
-        ),
-    )
-
-    # 8) Shorten labels
-    def shorten(lbl):
-        lbl = re.sub(r"(?i)measurement[s]?", "Meas.", lbl)
-        lbl = re.sub(r"(?i)manufacturing( partner)?", "MFG", lbl)
-        return re.sub(r"(?i)appointment[s]?", "Appt.", lbl)
-
-    # 9) Axes
-    fig.update_xaxes(
-        ticktext=[shorten(s) for s in status_order],
-        tickvals=status_order,
-        showticklabels=True,
-        ticks="outside",
-        tickangle=-45,
-        showline=True,
-        linecolor="#2C3E70",
-        autorange=False,
-        fixedrange=True,
-        range=[-0.5, len(status_order) - 0.5],
-    )
-
-    fig.update_yaxes(
-        range=[0, top],
-        autorange=False,
-        rangemode="tozero",
-        showticklabels=False,
-        ticks="",
-        fixedrange=True,
-    )
-
-    return fig
+# MAKE_STATUS_FIGURE FUNCTION COMMENTED OUT - REMOVED FROM DASHBOARD
+# def make_status_figure(jobs_df: pd.DataFrame, selected_franchisee: str, historical_lookup: dict) -> go.Figure:
+#     """
+#     Build and return the stacked-bar + totals figure for the given franchisee.
+#     """
+#
+#     status_order = [
+#         "Measurement Appointment Scheduled",
+#         "Measurement Approved",
+#         "Submitted to Manufacturing Partner",
+#         "Order Shipped",
+#         "Order Received",
+#         "Install Scheduled",
+#         "Installed",
+#         "Complete",
+#     ]
+#
+#     # 1) Filter
+#     df_f = (
+#         jobs_df
+#         if selected_franchisee == "All"
+#         else jobs_df[jobs_df["Franchisee"] == selected_franchisee]
+#     )
+#
+#     # 2) Aggregate
+#     grouped = (
+#         df_f.groupby(["Status", "Order Type"], observed=False)
+#         .agg(Count=("ID", "nunique"))
+#         .reset_index()
+#     )
+#     grouped["Status"] = pd.Categorical(
+#         grouped["Status"], categories=status_order, ordered=True
+#     )
+#
+#     # 3) Fill missing combos
+#     order_types = ["New", "Claim", "Reorder"]
+#     combos = pd.MultiIndex.from_product(
+#         [status_order, order_types], names=["Status", "Order Type"]
+#     )
+#     grouped = (
+#         grouped.set_index(["Status", "Order Type"])
+#         .reindex(combos, fill_value=0)
+#         .reset_index()
+#     )
+#
+#     # 4) Compute totals
+#     totals = (
+#         grouped.groupby("Status", observed=False)["Count"]
+#         .sum()
+#         .reindex(status_order)
+#         .reset_index()
+#     )
+#     raw_max = int(totals["Count"].max()) if not totals.empty else 0
+#     top = math.ceil(raw_max / 5) * 5 * 1.1 if raw_max % 5 else raw_max * 1.1
+#     top = int(math.ceil(top))
+#
+#     # 5) Build manually with go.Figure()
+#     fig = go.Figure()
+#
+#     bar_colors = {"New": "#2C3E70", "Claim": "#a1c4bd", "Reorder": "#bbbfbf"}
+#
+#     for ot in order_types:
+#         df_trace = grouped[grouped["Order Type"] == ot]
+#         fig.add_trace(
+#             go.Bar(
+#                 x=df_trace["Status"],
+#                 y=df_trace["Count"],
+#                 name=ot,
+#                 marker_color=bar_colors.get(ot, "#888"),
+#                 customdata=[[ot]] * len(df_trace),
+#                 hovertemplate="<b>%{x}</b><br>Type: %{customdata[0]}<br>Count: %{y}<extra></extra>",
+#                 uid=ot,
+#                 hoverlabel=dict(
+#                     bgcolor=bar_colors.get(ot, "#888"),
+#                     font_size=14,
+#                     font_color="white",  # white looks best on these
+#                 ),
+#             )
+#         )
+#
+#     hover_texts = []
+#     for s, c in zip(totals["Status"], totals["Count"]):
+#         if selected_franchisee == "All":
+#             prev = historical_lookup.get(s)
+#             if prev is None or prev == 0:
+#                 hover_texts.append(f"<b>{s}</b><br><b>1 Wk Ago:</b> –<extra></extra>")
+#             else:
+#                 delta = get_delta_percent(c, prev)
+#                 delta_text = format_with_change(c, prev).split()[-1]
+#                 color = percent_to_color(delta)
+#                 hover_texts.append(
+#                     f"<b>{s}</b><br><b>1 Wk Ago:</b> {int(prev)} "
+#                     f"<span style='color:{color}'>{delta_text}</span><extra></extra>"
+#                 )
+#         else:
+#             hover_texts.append(f"<b>{s}</b><br><b>Count:</b> {int(c)}<extra></extra>")
+#
+#     # 6) Add total labels as pixel-aligned annotations
+#     for x, y, text in zip(totals["Status"], totals["Count"], totals["Count"]):
+#         fig.add_annotation(
+#             x=x,
+#             y=y,
+#             text=str(int(text)),
+#             showarrow=False,
+#             yanchor="bottom",
+#             yshift=2,  # shift label 2 pixels above bar
+#             font=dict(color="#2C3E70", size=14),
+#             align="center",
+#         )
+#
+#     if selected_franchisee == "All":
+#         fig.add_trace(
+#             go.Scatter(
+#                 x=totals["Status"],
+#                 y=totals["Count"] + 4,  # ← ALIGN to true count, not offset
+#                 mode="markers",
+#                 marker=dict(size=30, color="rgba(0,0,0,0)"),  # transparent
+#                 hovertemplate=hover_texts,
+#                 showlegend=False,
+#                 hoverlabel=dict(
+#                     bgcolor="white",
+#                     font_size=14,
+#                     font_color="black",
+#                     bordercolor="#2C3E70",
+#                 ),
+#             )
+#         )
+#
+#     fig.update_layout(
+#         uirevision="static-axes",
+#         plot_bgcolor="white",
+#         paper_bgcolor="white",
+#         hoverlabel=dict(
+#             bgcolor="white",  # Background color
+#             font_size=14,  # Font size
+#             font_color="black",  # Text color
+#             bordercolor="#2C3E70",  # Optional: adds a subtle border for separation
+#         ),
+#         barmode="stack",
+#         height=500,
+#         margin=dict(t=100, b=30, l=40, r=40),
+#         font=dict(
+#             family="Segoe UI, sans-serif", size=14, color="#2C3E70"
+#         ),  # Global font for axis, legend, etc.
+#         legend=dict(orientation="h", y=1.05, x=1, xanchor="right"),
+#         title=dict(
+#             text=f"Project Status by Order Type — {selected_franchisee}",
+#             font=dict(
+#                 family="Segoe UI, sans-serif",
+#                 size=20,  # Match H1-style prominence
+#                 color="#2C3E70",
+#             ),
+#         ),
+#     )
+#
+#     # 8) Shorten labels
+#     def shorten(lbl):
+#         lbl = re.sub(r"(?i)measurement[s]?", "Meas.", lbl)
+#         lbl = re.sub(r"(?i)manufacturing( partner)?", "MFG", lbl)
+#         return re.sub(r"(?i)appointment[s]?", "Appt.", lbl)
+#
+#     # 9) Axes
+#     fig.update_xaxes(
+#         ticktext=[shorten(s) for s in status_order],
+#         tickvals=status_order,
+#         showticklabels=True,
+#         ticks="outside",
+#         tickangle=-45,
+#         showline=True,
+#         linecolor="#2C3E70",
+#         autorange=False,
+#         fixedrange=True,
+#         range=[-0.5, len(status_order) - 0.5],
+#     )
+#
+#     fig.update_yaxes(
+#         range=[0, top],
+#         autorange=False,
+#         rangemode="tozero",
+#         showticklabels=False,
+#         ticks="",
+#         fixedrange=True,
+#     )
+#
+#     return fig
 
 
 def build_call_center_metrics(outbound_df, proxy_last_week=None, booked_last_week=None):
@@ -584,7 +575,8 @@ def update_dashboard(selected_week, selected_franchisee="All"):
     jobs_all_df, calls_all_df, roi_df = load_master_data()
 
     # Historical period: 1 week ago
-    reference_weeks = generate_reference_weeks(start_csv, jobs_all_df)
+    # JOBS REMOVED - using calls_all_df for reference weeks instead
+    reference_weeks = generate_reference_weeks(start_csv, calls_all_df)
     one_week_ago_start, one_week_ago_end = reference_weeks["1 week ago"]
 
     # convert to date objects
@@ -595,12 +587,12 @@ def update_dashboard(selected_week, selected_franchisee="All"):
     lw_sun_str = start_dt.strftime("%B %-d")  # e.g. "June 8"
     lw_sat_str = end_dt.strftime("%B %-d")  # e.g. "June 14"
 
-    # Filter jobs
-    jobs_df = jobs_all_df[
-        (jobs_all_df["week_start"] == start_csv) & (jobs_all_df["week_end"] == end_csv)
-    ]
-    if selected_franchisee != "All":
-        jobs_df = jobs_df[jobs_df["Franchisee"] == selected_franchisee]
+    # JOBS FILTERING COMMENTED OUT - REMOVED FROM DASHBOARD
+    # jobs_df = jobs_all_df[
+    #     (jobs_all_df["week_start"] == start_csv) & (jobs_all_df["week_end"] == end_csv)
+    # ]
+    # if selected_franchisee != "All":
+    #     jobs_df = jobs_df[jobs_df["Franchisee"] == selected_franchisee]
 
     # Filter calls
     inbound_df = calls_all_df[
@@ -617,27 +609,30 @@ def update_dashboard(selected_week, selected_franchisee="All"):
 
     # Defensive: skip if 1-wk-ago not available
     if "1 week ago" not in reference_weeks:
-        previous_jobs_df = pd.DataFrame()
+        # previous_jobs_df = pd.DataFrame()
         one_week_ago_start, one_week_ago_end = None, None
     else:
         one_week_ago_start, one_week_ago_end = reference_weeks["1 week ago"]
-        previous_jobs_df = jobs_all_df[
-            (jobs_all_df["week_start"] == one_week_ago_start)
-            & (jobs_all_df["week_end"] == one_week_ago_end)
-        ]
+        # JOBS PREVIOUS WEEK LOOKUP COMMENTED OUT - REMOVED FROM DASHBOARD
+        # previous_jobs_df = jobs_all_df[
+        #     (jobs_all_df["week_start"] == one_week_ago_start)
+        #     & (jobs_all_df["week_end"] == one_week_ago_end)
+        # ]
 
-    if selected_franchisee != "All":
-        previous_jobs_df = previous_jobs_df[
-            previous_jobs_df["Franchisee"] == selected_franchisee
-        ]
+    # JOBS FRANCHISEE FILTER COMMENTED OUT - REMOVED FROM DASHBOARD
+    # if selected_franchisee != "All":
+    #     previous_jobs_df = previous_jobs_df[
+    #         previous_jobs_df["Franchisee"] == selected_franchisee
+    #     ]
 
     # Guard Historical Lookup
-    if previous_jobs_df.empty:
-        historical_lookup = {}
-    else:
-        historical_lookup = (
-            previous_jobs_df.groupby("Status", observed=False)["ID"].nunique().to_dict()
-        )
+    # JOBS HISTORICAL LOOKUP COMMENTED OUT - REMOVED FROM DASHBOARD
+    # if previous_jobs_df.empty:
+    #     historical_lookup = {}
+    # else:
+    #     historical_lookup = (
+    #         previous_jobs_df.groupby("Status", observed=False)["ID"].nunique().to_dict()
+    #     )
 
     if one_week_ago_start and one_week_ago_end:
         previous_outbound_df = calls_all_df[
@@ -667,7 +662,8 @@ def update_dashboard(selected_week, selected_franchisee="All"):
     # Continue as usual
     metrics_children = build_call_center_metrics(outbound_df, proxy_last_week, booked_last_week)
 
-    fig = make_status_figure(jobs_df, selected_franchisee, historical_lookup)
+    # JOBS STATUS FIGURE COMMENTED OUT - REMOVED FROM DASHBOARD
+    # fig = make_status_figure(jobs_df, selected_franchisee, historical_lookup)
 
     # Grab last week's "Totals" row
     previous_df = calls_all_df[
@@ -793,58 +789,59 @@ def update_dashboard(selected_week, selected_franchisee="All"):
         )
     
     dashboard_sections=[
-        # Operations header + chart
-        html.Div(
-            style={"marginTop": "0px"},
-            children=[
-                html.H2(
-                    "Operations",
-                    style={
-                        "marginTop": "10px",
-                        "marginBottom": "6px",
-                        "color": "#2C3E70",
-                    },
-                ),
-                html.Div(
-                    f"Data collected from the week of {lw_sun_str} – {lw_sat_str}",
-                    style={
-                        "fontSize": "14px",
-                        "color": "gray",
-                        "fontStyle": "italic",
-                        "marginBottom": "24px",
-                    },
-                ),
-                html.Div(
-                    [
-                        html.Label(
-                            "Select Franchisee:",
-                            style={
-                                "fontWeight": "600",
-                                "color": "#2C3E70",
-                                "marginBottom": "6px",
-                            },
-                        ),
-                        dcc.Dropdown(
-                            id="franchisee-selector",
-                            options=[
-                                {"label": f, "value": f}
-                                for f in [
-                                    "All",
-                                    *sorted(
-                                        jobs_all_df["Franchisee"].dropna().unique()
-                                    ),
-                                ]
-                            ],
-                            value=selected_franchisee,
-                            clearable=False,
-                            style={"width": "240px", "border": "1px solid #2C3E70"},
-                        ),
-                        dcc.Graph(id="status-bar-chart", figure=fig),
-                    ],
-                    style={"display": "flex", "flexDirection": "column"},
-                ),
-            ],
-        ),
+        # OPERATIONS SECTION COMMENTED OUT - REMOVED FROM DASHBOARD
+        # # Operations header + chart
+        # html.Div(
+        #     style={"marginTop": "0px"},
+        #     children=[
+        #         html.H2(
+        #             "Operations",
+        #             style={
+        #                 "marginTop": "10px",
+        #                 "marginBottom": "6px",
+        #                 "color": "#2C3E70",
+        #             },
+        #         ),
+        #         html.Div(
+        #             f"Data collected from the week of {lw_sun_str} – {lw_sat_str}",
+        #             style={
+        #                 "fontSize": "14px",
+        #                 "color": "gray",
+        #                 "fontStyle": "italic",
+        #                 "marginBottom": "24px",
+        #             },
+        #         ),
+        #         html.Div(
+        #             [
+        #                 html.Label(
+        #                     "Select Franchisee:",
+        #                     style={
+        #                         "fontWeight": "600",
+        #                         "color": "#2C3E70",
+        #                         "marginBottom": "6px",
+        #                     },
+        #                 ),
+        #                 dcc.Dropdown(
+        #                     id="franchisee-selector",
+        #                     options=[
+        #                         {"label": f, "value": f}
+        #                         for f in [
+        #                             "All",
+        #                             *sorted(
+        #                                 jobs_all_df["Franchisee"].dropna().unique()
+        #                             ),
+        #                         ]
+        #                     ],
+        #                     value=selected_franchisee,
+        #                     clearable=False,
+        #                     style={"width": "240px", "border": "1px solid #2C3E70"},
+        #                 ),
+        #                 dcc.Graph(id="status-bar-chart", figure=fig),
+        #             ],
+        #             style={"display": "flex", "flexDirection": "column"},
+        #         ),
+        #     ],
+        # ),
         # Call Center
         html.Div(
             style={"marginTop": "0px"},

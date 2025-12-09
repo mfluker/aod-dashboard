@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from dash import dash_table, dcc, html
 from functools import lru_cache
 
-from data_fetcher import load_jobs_data, download_conversion_report, fetch_roi
+from data_fetcher import download_conversion_report, fetch_roi  # removed: load_jobs_data
 
 
 # Helpers
@@ -92,16 +92,18 @@ def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFram
 
     session = data_fetcher.get_session_with_canvas_cookie()
 
-    if not parquet_has_week(jobs_df, start, end):
-        print(f"📦 Adding Jobs data for {start} – {end}...")
-        new_jobs   = data_fetcher.load_jobs_data(start, end)
-        new_jobs["week_start"] = start
-        new_jobs["week_end"] = end
-        new_jobs["ID"] = new_jobs["ID"].astype(str)
-        jobs_df = pd.concat([jobs_df, new_jobs], ignore_index=True)
-        jobs_df.to_parquet(jobs_path, index=False)
-    else:
-        print(f"✅ Jobs data for {start} – {end} already present.")
+    # JOBS DATA FETCHING COMMENTED OUT - REMOVED FROM DASHBOARD
+    # if not parquet_has_week(jobs_df, start, end):
+    #     print(f"📦 Adding Jobs data for {start} – {end}...")
+    #     new_jobs   = data_fetcher.load_jobs_data(start, end)
+    #     new_jobs["week_start"] = start
+    #     new_jobs["week_end"] = end
+    #     new_jobs["ID"] = new_jobs["ID"].astype(str)
+    #     jobs_df = pd.concat([jobs_df, new_jobs], ignore_index=True)
+    #     jobs_df.to_parquet(jobs_path, index=False)
+    # else:
+    #     print(f"✅ Jobs data for {start} – {end} already present.")
+    print(f"⏭️  Skipping Jobs data (feature removed from dashboard)")
 
     if not parquet_has_week(calls_df, start, end):
         print(f"📞 Adding Call Center data for {start} – {end}...")

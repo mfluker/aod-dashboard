@@ -1,0 +1,336 @@
+ID,Order Type,Franchisee,Date,Status
+3748,New,Art of Drawers Tampa,7/18/2025 4:37 PM,Measurement Appointment Scheduled
+3743,New,Art of Drawers Austin,"7/17/2025 8:28 PM,7/18/2025 7:01 AM",Measurement Appointment Scheduled
+3726,New,Art of Drawers Charlotte,7/18/2025 8:54 AM,Measurement Appointment Scheduled
+3718,New,Art of Drawers Fort Lauderdale,7/15/2025 5:42 PM,Measurement Appointment Scheduled
+3717,New,Art of Drawers Portland,7/19/2025 6:38 PM,Measurement Appointment Scheduled
+3716,New,Art of Drawers Tampa,7/18/2025 7:35 AM,Measurement Appointment Scheduled
+3701,New,Art of Drawers Cedar Grove,7/14/2025 9:23 PM,Measurement Appointment Scheduled
+3698,New,ILM Testing/Training,7/14/2025 9:37 AM,Measurement Appointment Scheduled
+3695,New,Art of Drawers Chicago,7/16/2025 11:43 AM,Measurement Appointment Scheduled
+3694,New,Art of Drawers Austin,7/13/2025 1:40 PM,Measurement Appointment Scheduled
+3693,New,Art of Drawers Dallas,7/16/2025 9:53 PM,Measurement Appointment Scheduled
+3687,New,Art of Drawers Tampa,7/15/2025 10:43 PM,Measurement Appointment Scheduled
+3684,New,Art of Drawers Buffalo,7/14/2025 9:18 PM,Measurement Appointment Scheduled
+3681,New,Art of Drawers Cincinnati,7/15/2025 8:54 AM,Measurement Appointment Scheduled
+3678,New,Art of Drawers Kansas City,7/16/2025 9:15 PM,Measurement Appointment Scheduled
+3676,New,Art of Drawers Charlotte,7/14/2025 3:48 PM,Measurement Appointment Scheduled
+3674,New,Art of Drawers Birmingham,7/14/2025 10:39 AM,Measurement Appointment Scheduled
+1799,New,Art of Drawers Dallas,7/14/2025 9:30 AM,Measurement Appointment Scheduled
+3743,New,Art of Drawers Austin,"7/17/2025 8:35 PM,7/18/2025 7:38 AM,7/19/2025 11:46 AM",Measurement Approved
+R3742,Reorder,Art of Drawers Austin,7/17/2025 6:23 PM,Measurement Approved
+3720,New,Art of Drawers Buffalo,7/18/2025 2:44 PM,Measurement Approved
+R3710,Reorder,Art of Drawers Fort Lauderdale,7/14/2025 3:33 PM,Measurement Approved
+R3709,Reorder,Art of Drawers Fort Lauderdale,7/14/2025 3:30 PM,Measurement Approved
+3701,New,Art of Drawers Cedar Grove,7/16/2025 10:41 AM,Measurement Approved
+3698,New,ILM Testing/Training,7/14/2025 9:39 AM,Measurement Approved
+3695,New,Art of Drawers Chicago,7/16/2025 2:26 PM,Measurement Approved
+3694,New,Art of Drawers Austin,7/13/2025 1:49 PM,Measurement Approved
+3685,New,Art of Drawers Charleston,"7/16/2025 9:21 PM,7/18/2025 10:35 AM",Measurement Approved
+3684,New,Art of Drawers Buffalo,7/17/2025 8:53 PM,Measurement Approved
+3683,New,Art of Drawers Buffalo,7/18/2025 2:30 PM,Measurement Approved
+3682,New,Art of Drawers Buffalo,7/18/2025 2:36 PM,Measurement Approved
+3678,New,Art of Drawers Kansas City,7/19/2025 6:04 PM,Measurement Approved
+3676,New,Art of Drawers Charlotte,7/15/2025 9:20 AM,Measurement Approved
+3675,New,Art of Drawers Buffalo,7/17/2025 10:55 PM,Measurement Approved
+3674,New,Art of Drawers Birmingham,"7/14/2025 4:20 PM,7/14/2025 5:17 PM",Measurement Approved
+3665,New,Art of Drawers Tampa,7/14/2025 2:05 PM,Measurement Approved
+3664,New,Art of Drawers Detroit,7/16/2025 11:49 AM,Measurement Approved
+3638,New,Art of Drawers Fort Lauderdale,"7/14/2025 3:58 PM,7/19/2025 11:18 AM",Measurement Approved
+3637,New,Art of Drawers Omaha,7/15/2025 4:10 PM,Measurement Approved
+3631,New,Art of Drawers Fort Lauderdale,"7/15/2025 12:26 PM,7/19/2025 11:45 AM",Measurement Approved
+3625,New,Art of Drawers Connecticut,7/15/2025 10:58 AM,Measurement Approved
+3607,New,Art of Drawers Buffalo,7/16/2025 12:49 PM,Measurement Approved
+3604,New,Art of Drawers Connecticut,7/14/2025 4:46 PM,Measurement Approved
+3592,New,Art of Drawers Charleston,7/15/2025 7:05 AM,Measurement Approved
+3583,New,Art of Drawers Buffalo,7/16/2025 10:34 AM,Measurement Approved
+3579,New,Art of Drawers North Atlanta,"7/16/2025 5:13 PM,7/17/2025 5:25 PM",Measurement Approved
+3477,New,Art of Drawers Columbus,7/14/2025 5:31 PM,Measurement Approved
+3457,New,Art of Drawers Connecticut,7/15/2025 9:19 AM,Measurement Approved
+3329,New,Art of Drawers Buffalo,"7/16/2025 10:20 AM,7/18/2025 3:03 PM",Measurement Approved
+3311,New,Art of Drawers Chicago,7/15/2025 3:34 PM,Measurement Approved
+3135,New,Art of Drawers Chicago,7/16/2025 11:51 AM,Measurement Approved
+C3745,Claim,Art of Drawers Omaha,7/18/2025 2:40 PM,Submitted to Manufacturing Partner
+R3742,Reorder,Art of Drawers Austin,7/18/2025 4:16 PM,Submitted to Manufacturing Partner
+C3741,Claim,Art of Drawers Birmingham,7/17/2025 3:09 PM,Submitted to Manufacturing Partner
+C3739,Claim,Art of Drawers Buffalo,7/17/2025 12:45 PM,Submitted to Manufacturing Partner
+C3738,Claim,Art of Drawers Cincinnati,7/17/2025 11:20 AM,Submitted to Manufacturing Partner
+C3737,Claim,Art of Drawers Detroit,7/17/2025 11:16 AM,Submitted to Manufacturing Partner
+C3736,Claim,Art of Drawers Raleigh,7/17/2025 11:05 AM,Submitted to Manufacturing Partner
+C3735,Claim,Art of Drawers Buffalo,7/17/2025 10:48 AM,Submitted to Manufacturing Partner
+C3734,Claim,Art of Drawers Denver,7/17/2025 10:40 AM,Submitted to Manufacturing Partner
+WC3733,New,Art of Drawers Cedar Grove,7/17/2025 10:33 AM,Submitted to Manufacturing Partner
+C3729,Claim,Art of Drawers Omaha,7/16/2025 4:24 PM,Submitted to Manufacturing Partner
+C3728,Claim,Art of Drawers Raleigh,7/16/2025 3:51 PM,Submitted to Manufacturing Partner
+C3725,Claim,Art of Drawers Cincinnati,7/16/2025 9:03 AM,Submitted to Manufacturing Partner
+C3724,Claim,Art of Drawers Cincinnati,7/15/2025 6:21 PM,Submitted to Manufacturing Partner
+C3723,Claim,Art of Drawers Cincinnati,7/15/2025 6:13 PM,Submitted to Manufacturing Partner
+C3722,Claim,Art of Drawers Cincinnati,7/15/2025 5:43 PM,Submitted to Manufacturing Partner
+C3721,Claim,Art of Drawers Austin,7/15/2025 4:38 PM,Submitted to Manufacturing Partner
+3720,New,Art of Drawers Buffalo,7/18/2025 4:43 PM,Submitted to Manufacturing Partner
+C3715,Claim,Art of Drawers Omaha,7/15/2025 9:14 AM,Submitted to Manufacturing Partner
+C3714,Claim,Art of Drawers Tampa,7/14/2025 5:35 PM,Submitted to Manufacturing Partner
+C3713,Claim,Art of Drawers Tampa,7/14/2025 5:34 PM,Submitted to Manufacturing Partner
+C3712,Claim,Art of Drawers Buffalo,7/14/2025 5:26 PM,Submitted to Manufacturing Partner
+C3711,Claim,Art of Drawers Buffalo,7/14/2025 5:23 PM,Submitted to Manufacturing Partner
+R3710,Reorder,Art of Drawers Fort Lauderdale,7/18/2025 4:14 PM,Submitted to Manufacturing Partner
+R3709,Reorder,Art of Drawers Fort Lauderdale,7/18/2025 4:11 PM,Submitted to Manufacturing Partner
+C3708,Claim,Art of Drawers Denver,7/14/2025 3:17 PM,Submitted to Manufacturing Partner
+C3707,Claim,Art of Drawers Tampa,7/14/2025 3:10 PM,Submitted to Manufacturing Partner
+WC3706,New,Art of Drawers Cedar Grove,7/14/2025 2:06 PM,Submitted to Manufacturing Partner
+C3705,Claim,Art of Drawers Raleigh,7/14/2025 1:39 PM,Submitted to Manufacturing Partner
+C3704,Claim,Art of Drawers Tampa,7/14/2025 1:36 PM,Submitted to Manufacturing Partner
+C3703,Claim,Art of Drawers Tampa,7/14/2025 1:05 PM,Submitted to Manufacturing Partner
+C3702,Claim,Art of Drawers Tampa,7/14/2025 12:38 PM,Submitted to Manufacturing Partner
+3701,New,Art of Drawers Cedar Grove,7/16/2025 11:30 PM,Submitted to Manufacturing Partner
+C3700,Claim,Art of Drawers Columbus,7/14/2025 12:20 PM,Submitted to Manufacturing Partner
+C3699,Claim,Art of Drawers Twin Cities,7/14/2025 12:12 PM,Submitted to Manufacturing Partner
+C3697,Claim,Art of Drawers Denver,7/14/2025 8:41 AM,Submitted to Manufacturing Partner
+C3696,Claim,Art of Drawers Dallas Fort Worth,7/14/2025 8:38 AM,Submitted to Manufacturing Partner
+3695,New,Art of Drawers Chicago,7/16/2025 11:47 PM,Submitted to Manufacturing Partner
+3694,New,Art of Drawers Austin,7/14/2025 1:41 PM,Submitted to Manufacturing Partner
+3692,New,Art of Drawers Denver,7/14/2025 1:34 PM,Submitted to Manufacturing Partner
+3691,New,Art of Drawers North Atlanta,7/14/2025 9:30 AM,Submitted to Manufacturing Partner
+3690,New,Art of Drawers North Atlanta,7/14/2025 4:44 PM,Submitted to Manufacturing Partner
+3689,New,Art of Drawers Denver,7/14/2025 1:12 PM,Submitted to Manufacturing Partner
+R3688,Reorder,Art of Drawers Cincinnati,7/15/2025 5:30 PM,Submitted to Manufacturing Partner
+3686,New,Art of Drawers Raleigh,7/14/2025 12:47 PM,Submitted to Manufacturing Partner
+3685,New,Art of Drawers Charleston,7/18/2025 4:39 PM,Submitted to Manufacturing Partner
+3684,New,Art of Drawers Buffalo,7/18/2025 4:29 PM,Submitted to Manufacturing Partner
+3683,New,Art of Drawers Buffalo,7/18/2025 4:41 PM,Submitted to Manufacturing Partner
+3682,New,Art of Drawers Buffalo,7/18/2025 4:42 PM,Submitted to Manufacturing Partner
+3676,New,Art of Drawers Charlotte,7/16/2025 11:04 PM,Submitted to Manufacturing Partner
+3675,New,Art of Drawers Buffalo,7/18/2025 4:32 PM,Submitted to Manufacturing Partner
+3674,New,Art of Drawers Birmingham,7/16/2025 10:49 PM,Submitted to Manufacturing Partner
+3672,New,Art of Drawers Charleston,7/14/2025 12:34 PM,Submitted to Manufacturing Partner
+3665,New,Art of Drawers Tampa,7/14/2025 4:26 PM,Submitted to Manufacturing Partner
+3664,New,Art of Drawers Detroit,7/16/2025 11:32 PM,Submitted to Manufacturing Partner
+3662,New,Art of Drawers Central Atlanta,"7/14/2025 1:36 PM,7/18/2025 5:48 PM",Submitted to Manufacturing Partner
+3637,New,Art of Drawers Omaha,7/16/2025 11:14 PM,Submitted to Manufacturing Partner
+3625,New,Art of Drawers Connecticut,7/16/2025 11:06 PM,Submitted to Manufacturing Partner
+3607,New,Art of Drawers Buffalo,7/16/2025 11:44 PM,Submitted to Manufacturing Partner
+3604,New,Art of Drawers Connecticut,7/16/2025 10:47 PM,Submitted to Manufacturing Partner
+3598,New,Art of Drawers Nashville,7/14/2025 4:43 PM,Submitted to Manufacturing Partner
+3592,New,Art of Drawers Charleston,7/16/2025 10:59 PM,Submitted to Manufacturing Partner
+3583,New,Art of Drawers Buffalo,7/16/2025 11:27 PM,Submitted to Manufacturing Partner
+3582,New,Art of Drawers Central Atlanta,7/14/2025 1:35 PM,Submitted to Manufacturing Partner
+3579,New,Art of Drawers North Atlanta,7/18/2025 4:28 PM,Submitted to Manufacturing Partner
+3564,New,Art of Drawers Raleigh,7/14/2025 12:51 PM,Submitted to Manufacturing Partner
+3563,New,Art of Drawers Omaha,7/14/2025 1:04 PM,Submitted to Manufacturing Partner
+3560,New,Art of Drawers Omaha,7/14/2025 1:06 PM,Submitted to Manufacturing Partner
+3554,New,Art of Drawers Portland,7/14/2025 12:07 PM,Submitted to Manufacturing Partner
+3510,New,Art of Drawers Buffalo,7/14/2025 12:58 PM,Submitted to Manufacturing Partner
+3494,New,Art of Drawers Dallas Fort Worth,7/14/2025 1:30 PM,Submitted to Manufacturing Partner
+3477,New,Art of Drawers Columbus,7/16/2025 10:53 PM,Submitted to Manufacturing Partner
+3311,New,Art of Drawers Chicago,7/16/2025 11:12 PM,Submitted to Manufacturing Partner
+3296,New,Art of Drawers Chicago,7/14/2025 4:19 PM,Submitted to Manufacturing Partner
+3162,New,Art of Drawers Buffalo,7/14/2025 12:54 PM,Submitted to Manufacturing Partner
+3135,New,Art of Drawers Chicago,7/16/2025 11:37 PM,Submitted to Manufacturing Partner
+3698,New,ILM Testing/Training,7/14/2025 1:41 PM,Order Shipped
+3689,New,Art of Drawers Denver,7/16/2025 12:36 PM,Order Shipped
+C3677,Claim,Art of Drawers Portland,7/15/2025 4:26 PM,Order Shipped
+C3671,Claim,Art of Drawers Omaha,7/14/2025 4:05 PM,Order Shipped
+3669,New,ILM Testing/Training,7/14/2025 12:08 PM,Order Shipped
+R3661,Reorder,Art of Drawers Charleston,7/15/2025 7:00 PM,Order Shipped
+3660,New,Art of Drawers Austin,7/17/2025 3:06 PM,Order Shipped
+C3658,Claim,Art of Drawers Charleston,7/15/2025 4:31 PM,Order Shipped
+C3655,Claim,Art of Drawers St. Louis,7/16/2025 1:08 PM,Order Shipped
+C3651,Claim,Art of Drawers Cincinnati,7/15/2025 1:14 PM,Order Shipped
+C3643,Claim,Art of Drawers Portland,7/14/2025 4:13 PM,Order Shipped
+C3633,Claim,Art of Drawers Denver,7/16/2025 2:20 PM,Order Shipped
+R3622,Reorder,Art of Drawers LLC,7/15/2025 7:00 PM,Order Shipped
+3621,New,Art of Drawers Twin Cities,7/18/2025 3:22 PM,Order Shipped
+R3618,Reorder,Art of Drawers Dallas,7/18/2025 4:02 PM,Order Shipped
+C3616,Claim,Art of Drawers Cincinnati,7/15/2025 1:30 PM,Order Shipped
+3615,New,Art of Drawers Tampa,7/14/2025 4:34 PM,Order Shipped
+R3612,Reorder,Art of Drawers Omaha,7/15/2025 4:21 PM,Order Shipped
+3599,New,Art of Drawers Omaha,7/14/2025 4:35 PM,Order Shipped
+C3593,Claim,Art of Drawers Charleston,7/15/2025 4:29 PM,Order Shipped
+C3591,Claim,Art of Drawers Cincinnati,7/15/2025 1:31 PM,Order Shipped
+3586,New,Art of Drawers Kansas City,7/15/2025 4:27 PM,Order Shipped
+3585,New,Art of Drawers Austin,7/18/2025 3:20 PM,Order Shipped
+3580,New,Art of Drawers Cedar Grove,7/16/2025 2:22 PM,Order Shipped
+3578,New,Art of Drawers Connecticut,7/16/2025 2:19 PM,Order Shipped
+C3576,Claim,Art of Drawers Nashville,7/17/2025 7:00 PM,Order Shipped
+3559,New,Art of Drawers Detroit,7/18/2025 3:19 PM,Order Shipped
+C3556,Claim,Art of Drawers North Atlanta,7/17/2025 3:41 PM,Order Shipped
+R3550,Reorder,Art of Drawers Cincinnati,7/15/2025 1:27 PM,Order Shipped
+3543,New,Art of Drawers Detroit,7/15/2025 7:00 PM,Order Shipped
+3542,New,Art of Drawers Cincinnati,7/14/2025 4:36 PM,Order Shipped
+3540,New,Art of Drawers Connecticut,7/18/2025 2:47 PM,Order Shipped
+R3535,Reorder,Art of Drawers LLC,7/18/2025 12:12 PM,Order Shipped
+3530,New,Art of Drawers Detroit,7/18/2025 11:15 AM,Order Shipped
+C3525,Claim,Art of Drawers Austin,7/16/2025 11:04 AM,Order Shipped
+3514,New,Art of Drawers Buffalo,7/16/2025 2:23 PM,Order Shipped
+C3513,Claim,Art of Drawers Omaha,7/14/2025 4:07 PM,Order Shipped
+C3512,Claim,Art of Drawers Omaha,7/16/2025 1:58 PM,Order Shipped
+R3506,Reorder,Art of Drawers Omaha,7/17/2025 4:19 PM,Order Shipped
+3503,New,Art of Drawers Detroit,7/17/2025 1:35 PM,Order Shipped
+3501,New,Art of Drawers North Atlanta,7/17/2025 3:09 PM,Order Shipped
+3492,New,Art of Drawers Connecticut,7/17/2025 3:08 PM,Order Shipped
+3491,New,Art of Drawers Charlotte,7/18/2025 12:09 PM,Order Shipped
+3481,New,Art of Drawers St. Louis,7/18/2025 3:21 PM,Order Shipped
+C3479,Claim,Art of Drawers Raleigh,7/14/2025 11:25 AM,Order Shipped
+3472,New,Art of Drawers St. Louis,7/18/2025 12:11 PM,Order Shipped
+3471,New,Art of Drawers Cedar Grove,7/15/2025 1:45 PM,Order Shipped
+3461,New,Art of Drawers Kansas City,7/16/2025 1:05 PM,Order Shipped
+3448,New,Art of Drawers North Atlanta,7/18/2025 3:18 PM,Order Shipped
+3447,New,Art of Drawers Austin,7/15/2025 11:02 AM,Order Shipped
+3430,New,Art of Drawers Kansas City,7/14/2025 4:39 PM,Order Shipped
+3421,New,Art of Drawers Detroit,7/16/2025 4:56 PM,Order Shipped
+3420,New,Art of Drawers Dallas,7/14/2025 4:14 PM,Order Shipped
+3416,New,Art of Drawers Columbus,7/15/2025 7:00 PM,Order Shipped
+R3412,Reorder,Art of Drawers Twin Cities,7/14/2025 4:33 PM,Order Shipped
+3384,New,Art of Drawers Tampa,7/15/2025 4:15 PM,Order Shipped
+3356,New,Art of Drawers Twin Cities,7/14/2025 12:19 PM,Order Shipped
+3339,New,Art of Drawers Buffalo,7/14/2025 1:20 PM,Order Shipped
+3270,New,Art of Drawers North Atlanta,7/15/2025 7:00 PM,Order Shipped
+3230,New,Art of Drawers Charleston,7/14/2025 4:12 PM,Order Shipped
+3223,New,Art of Drawers Fort Lauderdale,7/18/2025 3:14 PM,Order Shipped
+3024,New,Art of Drawers Buffalo,7/14/2025 1:22 PM,Order Shipped
+2796,New,Art of Drawers Buffalo,7/14/2025 1:21 PM,Order Shipped
+C3671,Claim,Art of Drawers Omaha,7/16/2025 2:02 PM,Order Received
+C3616,Claim,Art of Drawers Cincinnati,7/15/2025 1:30 PM,Order Received
+R3614,Reorder,Art of Drawers Austin,7/14/2025 6:02 PM,Order Received
+C3603,Claim,Art of Drawers Dallas,7/17/2025 3:20 PM,Order Received
+3599,New,Art of Drawers Omaha,7/16/2025 12:50 PM,Order Received
+C3591,Claim,Art of Drawers Cincinnati,7/15/2025 1:31 PM,Order Received
+C3576,Claim,Art of Drawers Nashville,7/18/2025 11:46 AM,Order Received
+3546,New,Art of Drawers Buffalo,7/15/2025 1:26 PM,Order Received
+3542,New,Art of Drawers Cincinnati,7/15/2025 1:26 PM,Order Received
+3529,New,Art of Drawers Tampa,7/15/2025 11:01 AM,Order Received
+C3525,Claim,Art of Drawers Austin,7/17/2025 2:07 PM,Order Received
+3523,New,Art of Drawers Austin,7/14/2025 4:53 PM,Order Received
+C3513,Claim,Art of Drawers Omaha,7/16/2025 1:57 PM,Order Received
+C3512,Claim,Art of Drawers Omaha,7/16/2025 1:58 PM,Order Received
+3508,New,Art of Drawers Upstate South Carolina,7/16/2025 8:38 AM,Order Received
+3504,New,Art of Drawers Tampa,7/15/2025 11:05 AM,Order Received
+R3493,Reorder,Art of Drawers Omaha,7/15/2025 12:11 PM,Order Received
+3483,New,Art of Drawers Cincinnati,7/15/2025 12:39 PM,Order Received
+3468,New,Art of Drawers Fort Lauderdale,7/19/2025 11:37 AM,Order Received
+3463,New,Art of Drawers St. Louis,7/18/2025 5:00 PM,Order Received
+3455,New,Art of Drawers Cedar Grove,7/16/2025 5:59 PM,Order Received
+3442,New,Art of Drawers Tampa,7/14/2025 7:32 AM,Order Received
+3420,New,Art of Drawers Dallas,7/17/2025 3:14 PM,Order Received
+3416,New,Art of Drawers Columbus,7/16/2025 4:14 PM,Order Received
+3396,New,Art of Drawers Buffalo,7/15/2025 1:24 PM,Order Received
+3395,New,Art of Drawers Detroit,7/15/2025 1:44 PM,Order Received
+3392,New,Art of Drawers Cedar Grove,7/16/2025 6:02 PM,Order Received
+3339,New,Art of Drawers Buffalo,7/16/2025 1:01 PM,Order Received
+3334,New,Art of Drawers Portland,7/16/2025 2:33 PM,Order Received
+3332,New,Art of Drawers Austin,7/16/2025 1:52 PM,Order Received
+3327,New,Art of Drawers Portland,7/15/2025 5:19 PM,Order Received
+C3322,Claim,Art of Drawers Portland,7/15/2025 5:07 PM,Order Received
+3309,New,Art of Drawers Tampa,7/14/2025 7:32 AM,Order Received
+3305,New,Art of Drawers Kansas City,7/19/2025 8:59 AM,Order Received
+3270,New,Art of Drawers North Atlanta,7/16/2025 9:43 AM,Order Received
+R3222,Reorder,Art of Drawers LLC,7/15/2025 5:51 PM,Order Received
+3202,New,Art of Drawers Buffalo,7/15/2025 1:23 PM,Order Received
+3151,New,Art of Drawers St. Louis,7/17/2025 1:11 PM,Order Received
+3024,New,Art of Drawers Buffalo,7/16/2025 12:52 PM,Order Received
+2950,New,Art of Drawers Tampa,7/14/2025 10:29 AM,Order Received
+2832,New,Art of Drawers Buffalo,7/15/2025 1:23 PM,Order Received
+2796,New,Art of Drawers Buffalo,7/16/2025 12:59 PM,Order Received
+R3614,Reorder,Art of Drawers Austin,7/17/2025 6:49 PM,Install Scheduled
+C3566,Claim,Art of Drawers Portland,7/15/2025 5:16 PM,Install Scheduled
+3536,New,Art of Drawers Central Atlanta,7/15/2025 2:24 PM,Install Scheduled
+3529,New,Art of Drawers Tampa,7/15/2025 11:02 AM,Install Scheduled
+3508,New,Art of Drawers Upstate South Carolina,7/18/2025 8:51 AM,Install Scheduled
+3504,New,Art of Drawers Tampa,7/15/2025 11:07 AM,Install Scheduled
+3486,New,Art of Drawers Dallas Fort Worth,7/14/2025 6:12 PM,Install Scheduled
+3468,New,Art of Drawers Fort Lauderdale,7/19/2025 11:42 AM,Install Scheduled
+3442,New,Art of Drawers Tampa,7/15/2025 10:48 PM,Install Scheduled
+3405,New,Art of Drawers Austin,7/14/2025 10:29 AM,Install Scheduled
+3392,New,Art of Drawers Cedar Grove,7/19/2025 8:32 AM,Install Scheduled
+3341,New,Art of Drawers Central Atlanta,7/15/2025 3:55 PM,Install Scheduled
+3332,New,Art of Drawers Austin,7/17/2025 8:19 PM,Install Scheduled
+3331,New,Art of Drawers Nashville,7/18/2025 12:40 PM,Install Scheduled
+3327,New,Art of Drawers Portland,7/15/2025 5:24 PM,Install Scheduled
+C3322,Claim,Art of Drawers Portland,7/15/2025 5:07 PM,Install Scheduled
+3309,New,Art of Drawers Tampa,7/15/2025 10:50 PM,Install Scheduled
+3305,New,Art of Drawers Kansas City,7/19/2025 9:00 AM,Install Scheduled
+3301,New,Art of Drawers Dallas,7/14/2025 9:28 AM,Install Scheduled
+R3291,Reorder,Art of Drawers Cincinnati,7/15/2025 12:18 PM,Install Scheduled
+3290,New,Art of Drawers Central Atlanta,7/15/2025 12:58 PM,Install Scheduled
+3256,New,Art of Drawers Raleigh,7/16/2025 3:35 PM,Install Scheduled
+3254,New,Art of Drawers North Atlanta,7/14/2025 1:28 PM,Install Scheduled
+3243,New,Art of Drawers Austin,7/17/2025 6:47 PM,Install Scheduled
+3229,New,Art of Drawers North Atlanta,7/15/2025 5:50 PM,Install Scheduled
+3226,New,Art of Drawers Cincinnati,7/16/2025 6:07 PM,Install Scheduled
+3225,New,Art of Drawers Nashville,7/14/2025 9:23 PM,Install Scheduled
+R3222,Reorder,Art of Drawers LLC,7/15/2025 5:52 PM,Install Scheduled
+3174,New,Art of Drawers Dallas,7/16/2025 10:58 PM,Install Scheduled
+3169,New,Art of Drawers North Atlanta,7/14/2025 4:57 PM,Install Scheduled
+3151,New,Art of Drawers St. Louis,7/17/2025 1:12 PM,Install Scheduled
+3138,New,Art of Drawers Portland,7/15/2025 5:31 PM,Install Scheduled
+3134,New,Art of Drawers St. Louis,7/18/2025 4:58 PM,Install Scheduled
+3114,New,Art of Drawers St. Louis,7/14/2025 6:06 PM,Install Scheduled
+3078,New,Art of Drawers St. Louis,7/16/2025 3:11 PM,Install Scheduled
+3024,New,Art of Drawers Buffalo,7/17/2025 2:48 PM,Install Scheduled
+3018,New,Art of Drawers Kansas City,7/15/2025 10:50 AM,Install Scheduled
+2964,New,Art of Drawers Buffalo,7/16/2025 10:30 PM,Install Scheduled
+2917,New,Art of Drawers Cincinnati,7/15/2025 3:53 PM,Install Scheduled
+3561,New,Art of Drawers Kansas City,7/15/2025 4:03 AM,Installed
+WC3520,New,Art of Drawers Cedar Grove,7/16/2025 5:37 PM,Installed
+3486,New,Art of Drawers Dallas Fort Worth,7/18/2025 10:12 PM,Installed
+R3470,Reorder,Art of Drawers Cincinnati,7/16/2025 5:53 PM,Installed
+C3425,Claim,Art of Drawers Tampa,7/14/2025 10:26 AM,Installed
+R3414,Reorder,Art of Drawers Detroit,7/17/2025 10:21 AM,Installed
+3392,New,Art of Drawers Cedar Grove,7/19/2025 5:39 PM,Installed
+3391,New,Art of Drawers Detroit,7/16/2025 11:19 AM,Installed
+3365,New,Art of Drawers Tampa,7/14/2025 2:59 PM,Installed
+3316,New,Art of Drawers Upstate South Carolina,7/17/2025 1:57 PM,Installed
+3301,New,Art of Drawers Dallas,7/17/2025 7:32 PM,Installed
+3279,New,Art of Drawers Dallas,7/16/2025 4:14 PM,Installed
+R3260,Reorder,Art of Drawers Cedar Grove,7/16/2025 5:58 PM,Installed
+3254,New,Art of Drawers North Atlanta,7/17/2025 2:53 PM,Installed
+3245,New,Art of Drawers Portland,7/15/2025 5:29 PM,Installed
+3218,New,Art of Drawers Omaha,7/13/2025 10:12 PM,Installed
+3207,New,Art of Drawers St. Louis,7/13/2025 10:48 AM,Installed
+3187,New,Art of Drawers Denver,7/14/2025 6:32 PM,Installed
+3174,New,Art of Drawers Dallas,7/16/2025 10:58 PM,Installed
+3170,New,Art of Drawers Birmingham,7/15/2025 3:47 PM,Installed
+3169,New,Art of Drawers North Atlanta,7/16/2025 6:03 PM,Installed
+3156,New,Art of Drawers Kansas City,7/15/2025 4:02 AM,Installed
+3133,New,Art of Drawers St. Louis,7/13/2025 10:48 AM,Installed
+3119,New,Art of Drawers Upstate South Carolina,7/16/2025 12:13 PM,Installed
+3116,New,Art of Drawers Cincinnati,7/17/2025 12:34 PM,Installed
+3114,New,Art of Drawers St. Louis,7/19/2025 6:22 PM,Installed
+3103,New,Art of Drawers Denver,7/15/2025 7:52 PM,Installed
+3077,New,Art of Drawers St. Louis,7/13/2025 10:49 AM,Installed
+R3035,Reorder,Art of Drawers Columbus,"7/16/2025 5:54 PM,7/16/2025 5:54 PM",Installed
+2965,New,Art of Drawers Nashville,7/19/2025 7:39 AM,Installed
+2948,New,Art of Drawers Buffalo,7/17/2025 2:02 PM,Installed
+2917,New,Art of Drawers Cincinnati,7/19/2025 5:19 PM,Installed
+2904,New,Art of Drawers Detroit,7/16/2025 5:39 PM,Installed
+2833,New,Art of Drawers Dallas,7/16/2025 3:38 PM,Installed
+2828,New,Art of Drawers North Atlanta,7/19/2025 4:06 PM,Installed
+2811,New,Art of Drawers Kansas City,7/15/2025 4:01 AM,Installed
+2709,New,Art of Drawers Dallas,7/16/2025 3:37 PM,Installed
+2527,New,Art of Drawers Cedar Grove,7/16/2025 5:57 PM,Installed
+C3634,Claim,Art of Drawers Austin,7/14/2025 5:50 PM,Complete
+C3596,Claim,Art of Drawers Central Atlanta,7/15/2025 1:12 PM,Complete
+C3594,Claim,Art of Drawers Detroit,7/15/2025 4:45 PM,Complete
+3572,New,Art of Drawers Austin,7/15/2025 11:04 AM,Complete
+C3525,Claim,Art of Drawers Austin,7/17/2025 2:08 PM,Complete
+WC3520,New,Art of Drawers Cedar Grove,7/16/2025 5:37 PM,Complete
+C3479,Claim,Art of Drawers Raleigh,7/14/2025 9:33 PM,Complete
+R3470,Reorder,Art of Drawers Cincinnati,7/16/2025 5:53 PM,Complete
+3447,New,Art of Drawers Austin,7/15/2025 11:02 AM,Complete
+C3425,Claim,Art of Drawers Tampa,"7/14/2025 10:26 AM,7/14/2025 10:26 AM",Complete
+R3414,Reorder,Art of Drawers Detroit,7/17/2025 10:21 AM,Complete
+R3260,Reorder,Art of Drawers Cedar Grove,7/16/2025 5:58 PM,Complete
+WC3201,New,Art of Drawers Chicago,7/16/2025 3:04 PM,Complete
+3042,New,Art of Drawers Dallas Fort Worth,7/14/2025 6:28 PM,Complete
+R3035,Reorder,Art of Drawers Columbus,"7/16/2025 5:54 PM,7/16/2025 5:54 PM",Complete
+2748,New,Art of Drawers Austin,7/15/2025 10:53 AM,Complete
+2722,New,Art of Drawers Columbus,7/13/2025 4:54 PM,Complete
+2648,New,Art of Drawers Austin,7/15/2025 10:52 AM,Complete
+2622,New,Art of Drawers Austin,7/15/2025 11:00 AM,Complete
+2604,New,Art of Drawers Austin,7/15/2025 10:59 AM,Complete
+2552,New,Art of Drawers Austin,7/15/2025 11:00 AM,Complete
+2523,New,Art of Drawers Portland,7/16/2025 4:13 PM,Complete
+2472,New,Art of Drawers Columbus,7/13/2025 4:54 PM,Complete
+2435,New,Art of Drawers Austin,7/15/2025 10:55 AM,Complete
+2416,New,Art of Drawers Austin,7/15/2025 10:54 AM,Complete
+2309,New,Art of Drawers Austin,7/15/2025 10:54 AM,Complete
