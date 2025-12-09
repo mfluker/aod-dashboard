@@ -48,4 +48,66 @@ Open these **2 links** for a seamless weekly update:
 
 ---
 
-That’s it. 1 update, 1 push, 1 view.
+That's it. 1 update, 1 push, 1 view.
+
+---
+
+## 📚 Additional Documentation
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Complete technical guide for developers
+  - How to add new metrics
+  - Data flow diagrams
+  - Code organization
+  - Best practices
+
+---
+
+## 📊 Current Metrics
+
+### Call Center Performance
+- Inbound leads and bookings
+- Outbound calls and bookings
+- Help rates with conditional formatting
+
+### Marketing ROI
+- Amount invested
+- Leads generated
+- Revenue per appointment
+
+All metrics include week-over-week comparisons.
+
+---
+
+## ➕ Adding New Metrics
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for complete instructions on adding new metrics to the dashboard.
+
+**Quick summary:**
+1. Create fetcher function in `updater/data_fetcher.py`
+2. Update storage in `updater/updater_utils.py`
+3. Create visualization in `dashboard/dashboard_utils.py`
+4. Add to dashboard sections
+
+---
+
+## 🔄 Recent Updates (Dec 2025)
+
+- ✅ **Auto-backfill**: Updater now fetches ALL missing weeks automatically
+- ✅ **Performance**: Removed slow Job Status Graph feature
+- ✅ **Better UI**: Improved Streamlit updater with modern styling
+- ✅ **Documentation**: Added comprehensive ARCHITECTURE.md guide
+
+---
+
+## 🐛 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Cookie expired | Re-export from Canvas using Cookie-Editor |
+| Dashboard not updating | Check Render logs, verify Git push |
+| Missing weeks | Updater auto-detects and fills gaps |
+| Week-over-week shows "–" | Previous week missing, run updater |
+
+---
+
+Last Updated: December 9, 2025

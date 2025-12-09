@@ -72,43 +72,87 @@ def get_last_full_week(for_date: date = None) -> tuple[str, str]:
 
 
 def parquet_has_week(df: pd.DataFrame, start: str, end: str) -> bool:
-
     return ((df["week_start"] == start) & (df["week_end"] == end)).any()
 
 
-def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFrame, roi_df: pd.DataFrame):
-    # jobs_path = Path("MasterData/all_jobs_data.parquet")
-    # calls_path = Path("MasterData/all_call_center_data.parquet")
-    # roi_path = Path("MasterData/all_roi_data.parquet")
+def get_all_missing_weeks(df: pd.DataFrame) -> list[tuple[str, str]]:
+    """
+    Get all missing weeks from the most recent week in the DataFrame to today.
+    Returns a list of (start_date, end_date) tuples in chronological order.
+    """
+    # Get the most recent week in the dataframe
+    if df.empty or "week_start" not in df.columns:
+        # If no data exists, start from 3 months ago
+        start_from = date.today() - timedelta(weeks=12)
+    else:
+        latest_week_start = pd.to_datetime(df["week_start"]).max()
+        start_from = latest_week_start.date() + timedelta(days=7)  # Next week after the latest
 
+    # Get the most recent complete week
+    current_week_start, current_week_end = get_last_full_week(date.today())
+    current_week_start_date = datetime.strptime(current_week_start, "%m/%d/%Y").date()
+
+    # Generate all weeks from start_from to current
+    missing_weeks = []
+    week_cursor = start_from
+
+    # Align to Sunday
+    days_since_sunday = (week_cursor.weekday() + 1) % 7
+    if days_since_sunday > 0:
+        week_cursor = week_cursor - timedelta(days=days_since_sunday)
+
+    while week_cursor <= current_week_start_date:
+        week_start = week_cursor
+        week_end = week_cursor + timedelta(days=6)
+
+        start_str = week_start.strftime("%m/%d/%Y")
+        end_str = week_end.strftime("%m/%d/%Y")
+
+        # Check if this week exists in the dataframe
+        if not parquet_has_week(df, start_str, end_str):
+            missing_weeks.append((start_str, end_str))
+
+        week_cursor = week_cursor + timedelta(days=7)
+
+    return missing_weeks
+
+
+def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFrame, roi_df: pd.DataFrame):
+    """
+    Fetch and append ALL missing weeks from the most recent data to today.
+    This ensures all gaps are filled, not just the latest week.
+    """
     # Robust path pointing to top-level Master_Data directory
     base_dir = Path(__file__).resolve().parent.parent / "dashboard" / "Master_Data"
-    
+
     jobs_path = base_dir / "all_jobs_data.parquet"
     calls_path = base_dir / "all_call_center_data.parquet"
     roi_path = base_dir / "all_roi_data.parquet"
 
-    start, end = get_last_full_week(date.today())
-
     session = data_fetcher.get_session_with_canvas_cookie()
 
     # JOBS DATA FETCHING COMMENTED OUT - REMOVED FROM DASHBOARD
-    # if not parquet_has_week(jobs_df, start, end):
-    #     print(f"📦 Adding Jobs data for {start} – {end}...")
-    #     new_jobs   = data_fetcher.load_jobs_data(start, end)
-    #     new_jobs["week_start"] = start
-    #     new_jobs["week_end"] = end
-    #     new_jobs["ID"] = new_jobs["ID"].astype(str)
-    #     jobs_df = pd.concat([jobs_df, new_jobs], ignore_index=True)
-    #     jobs_df.to_parquet(jobs_path, index=False)
-    # else:
-    #     print(f"✅ Jobs data for {start} – {end} already present.")
     print(f"⏭️  Skipping Jobs data (feature removed from dashboard)")
 
-    if not parquet_has_week(calls_df, start, end):
-        print(f"📞 Adding Call Center data for {start} – {end}...")
+    # Get all missing weeks for Call Center data (use calls_df as reference)
+    missing_weeks = get_all_missing_weeks(calls_df)
+
+    if not missing_weeks:
+        print(f"✅ All data is up to date! No missing weeks found.")
+        return jobs_df, calls_df, roi_df
+
+    print(f"📅 Found {len(missing_weeks)} missing week(s) to fetch:")
+    for start, end in missing_weeks:
+        print(f"   • {start} – {end}")
+
+    # Fetch each missing week
+    for week_num, (start, end) in enumerate(missing_weeks, 1):
+        print(f"\n📦 Fetching week {week_num}/{len(missing_weeks)}: {start} – {end}")
+
+        # Fetch Call Center data
+        print(f"  📞 Fetching Call Center data...")
         inbound, _ = data_fetcher.download_conversion_report(start, end, include_homeshow=False)
-        outbound,_ = data_fetcher.download_conversion_report(start, end, include_homeshow=True)
+        outbound, _ = data_fetcher.download_conversion_report(start, end, include_homeshow=True)
 
         inbound["mode"] = "inbound"
         outbound["mode"] = "outbound"
@@ -117,20 +161,22 @@ def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFram
             df["week_end"] = end
 
         calls_df = pd.concat([calls_df, inbound, outbound], ignore_index=True)
-        calls_df.to_parquet(calls_path, index=False)
-    else:
-        print(f"✅ Call Center data for {start} – {end} already present.")
 
-    if not parquet_has_week(roi_df, start, end):
-        print(f"Adding ROI data for {start} – {end}...")
-        new_roi = data_fetcher.fetch_roi(start, end, session) 
+        # Fetch ROI data
+        print(f"  💰 Fetching ROI data...")
+        new_roi = data_fetcher.fetch_roi(start, end, session)
         new_roi["week_start"] = start
         new_roi["week_end"] = end
 
         roi_df = pd.concat([roi_df, new_roi], ignore_index=True)
-        roi_df.to_parquet(roi_path, index=False)
-    else:
-        print(f"✅ ROI data for {start} – {end} already present.")
+
+        print(f"  ✅ Week {start} – {end} fetched successfully!")
+
+    # Save all updated data at once
+    print(f"\n💾 Saving updated data to Parquet files...")
+    calls_df.to_parquet(calls_path, index=False)
+    roi_df.to_parquet(roi_path, index=False)
+    print(f"✅ All {len(missing_weeks)} week(s) saved successfully!")
 
     return jobs_df, calls_df, roi_df
 

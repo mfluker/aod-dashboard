@@ -304,10 +304,9 @@ if valid_cookies:
 
                 # Debug information
                 st.write("📊 Current data status:")
-                st.write(f"• JOBS latest week_end: {jobs_df['week_end'].max()}")
-                st.write(f"• CALLS latest week_end: {calls_df['week_end'].max()}")
-                st.write(f"• ROI latest week_end: {roi_df['week_end'].max()}")
-                st.write(f"• Last full week: {get_last_full_week(date.today())}")
+                st.write(f"• Call Center latest week: {calls_df['week_end'].max()}")
+                st.write(f"• ROI latest week: {roi_df['week_end'].max()}")
+                st.write(f"• Last full week available: {get_last_full_week(date.today())[1]}")
 
                 # Fetch and append new data if needed
                 status.update(label="🔍 Checking for new data...")
