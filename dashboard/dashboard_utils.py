@@ -461,7 +461,7 @@ def build_call_center_line_chart(calls_all_df, selected_metric="touches"):
         mode="lines+markers",
         line=dict(color=color, width=3),
         marker=dict(size=8, color=color),
-        hovertemplate="<b>%{x}</b><br>Count: %{y}<extra></extra>"
+        hovertemplate="Week of %{x}<br>Count: %{y}<extra></extra>"
     ))
 
     fig.update_layout(
@@ -497,10 +497,10 @@ def build_call_center_line_chart(calls_all_df, selected_metric="touches"):
     return fig
 
 
-def build_marketing_line_chart(roi_all_df, selected_metric="amount_invested"):
+def build_marketing_line_chart(roi_all_df, selected_metric="cost_per_appt"):
     """
     Build a line chart showing Marketing metrics over all available weeks.
-    selected_metric: "amount_invested", "leads_generated", or "revenue_per_appt"
+    selected_metric: "cost_per_appt", "amount_invested", or "leads_generated"
     """
     # Get all ROI data
     roi_data = roi_all_df.copy()
@@ -535,21 +535,21 @@ def build_marketing_line_chart(roi_all_df, selected_metric="amount_invested"):
             return None
 
     # Select metric and prepare data
-    if selected_metric == "amount_invested":
+    if selected_metric == "cost_per_appt":
+        roi_data["value"] = roi_data["Cost Per Appt"].apply(extract_numeric)
+        title = "Cost Per Appointment Over Time"
+        y_title = "Cost ($)"
+        hover_format = "$%{y:,.2f}"
+    elif selected_metric == "amount_invested":
         roi_data["value"] = roi_data["Amount Invested"].apply(extract_numeric)
         title = "Amount Invested Over Time"
         y_title = "Amount ($)"
         hover_format = "$%{y:,.2f}"
-    elif selected_metric == "leads_generated":
+    else:  # leads_generated
         roi_data["value"] = roi_data["# of Leads"].apply(extract_numeric)
         title = "Leads Generated Over Time"
         y_title = "Number of Leads"
         hover_format = "%{y}"
-    else:  # revenue_per_appt
-        roi_data["value"] = roi_data["Revenue Per Appt"].apply(extract_numeric)
-        title = "Revenue Per Appointment Over Time"
-        y_title = "Revenue ($)"
-        hover_format = "$%{y:,.2f}"
 
     # Filter out null values
     roi_data = roi_data[roi_data["value"].notna()]
@@ -562,7 +562,108 @@ def build_marketing_line_chart(roi_all_df, selected_metric="amount_invested"):
         mode="lines+markers",
         line=dict(color="#2C3E70", width=3),
         marker=dict(size=8, color="#2C3E70"),
-        hovertemplate=f"<b>%{{x}}</b><br>{hover_format}<extra></extra>"
+        hovertemplate=f"Week of %{{x}}<br>{hover_format}<extra></extra>"
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text=title,
+            font=dict(family="Segoe UI, sans-serif", size=18, color="#2C3E70")
+        ),
+        xaxis_title="Week",
+        yaxis_title=y_title,
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        font=dict(family="Segoe UI, sans-serif", size=14, color="#2C3E70"),
+        hovermode="x unified",
+        height=400,
+        margin=dict(t=60, b=60, l=60, r=40)
+    )
+
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="#e1e8ed",
+        showline=True,
+        linecolor="#2C3E70",
+        tickangle=-45
+    )
+
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor="#e1e8ed",
+        showline=True,
+        linecolor="#2C3E70"
+    )
+
+    return fig
+
+
+def build_finance_line_chart(roi_all_df, selected_metric="revenue"):
+    """
+    Build a line chart showing Finance metrics over all available weeks.
+    selected_metric: "revenue", "revenue_per_appt", or "num_appts"
+    """
+    # Get all ROI data
+    roi_data = roi_all_df.copy()
+
+    if roi_data.empty:
+        return go.Figure().update_layout(
+            title="No data available",
+            font=dict(family="Segoe UI, sans-serif", color="#2C3E70")
+        )
+
+    # Sort by week_start
+    roi_data["week_start_dt"] = pd.to_datetime(roi_data["week_start"])
+    roi_data = roi_data.sort_values("week_start_dt")
+
+    # Create week labels
+    roi_data["week_label"] = roi_data.apply(
+        lambda row: f"{pd.to_datetime(row['week_start']).strftime('%m/%d')} – {pd.to_datetime(row['week_end']).strftime('%m/%d')}",
+        axis=1
+    )
+
+    # Helper to extract numeric value
+    import re
+    def extract_numeric(val):
+        if pd.isna(val):
+            return None
+        if isinstance(val, (int, float)):
+            return float(val)
+        cleaned = re.sub(r"[^\d\.\-]", "", str(val))
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+
+    # Select metric and prepare data
+    if selected_metric == "revenue":
+        roi_data["value"] = roi_data["Revenue"].apply(extract_numeric)
+        title = "Revenue Over Time"
+        y_title = "Revenue ($)"
+        hover_format = "$%{y:,.2f}"
+    elif selected_metric == "revenue_per_appt":
+        roi_data["value"] = roi_data["Revenue Per Appt"].apply(extract_numeric)
+        title = "Revenue Per Appointment Over Time"
+        y_title = "Revenue ($)"
+        hover_format = "$%{y:,.2f}"
+    else:  # num_appts
+        roi_data["value"] = roi_data["# of Appts"].apply(extract_numeric)
+        title = "# of Appointments Over Time"
+        y_title = "Number of Appointments"
+        hover_format = "%{y}"
+
+    # Filter out null values
+    roi_data = roi_data[roi_data["value"].notna()]
+
+    # Create figure
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=roi_data["week_label"],
+        y=roi_data["value"],
+        mode="lines+markers",
+        line=dict(color="#2C3E70", width=3),
+        marker=dict(size=8, color="#2C3E70"),
+        hovertemplate=f"Week of %{{x}}<br>{hover_format}<extra></extra>"
     ))
 
     fig.update_layout(
@@ -935,61 +1036,81 @@ def update_dashboard(selected_week, selected_franchisee="All"):
             return None
 
 
-    curr = {
+    # Marketing Metrics: Cost Per Appt, Amount Invested, Leads Generated
+    marketing_curr = {
+        "Cost Per Appointment": _get_val(roi_curr, "Cost Per Appt"),
         "Amount Invested":  _get_val(roi_curr, "Amount Invested"),
         "Leads Generated":  _get_val(roi_curr, "# of Leads"),
-        "Revenue Per Appt": _get_val(roi_curr, "Revenue Per Appt"),
     }
-    prev = {
-        k: _get_val(roi_prev, k if k != "Leads Generated" else "# of Leads")
-        for k in curr
+    marketing_prev = {
+        "Cost Per Appointment": _get_val(roi_prev, "Cost Per Appt"),
+        "Amount Invested": _get_val(roi_prev, "Amount Invested"),
+        "Leads Generated": _get_val(roi_prev, "# of Leads"),
     }
 
-    cards = []
-    for label, now in curr.items():
-        old = prev[label]
+    # Finance Metrics: Revenue, Revenue Per Appt, # of Appointments
+    finance_curr = {
+        "Revenue": _get_val(roi_curr, "Revenue"),
+        "Revenue Per Appointment": _get_val(roi_curr, "Revenue Per Appt"),
+        "# of Appointments": _get_val(roi_curr, "# of Appts"),
+    }
+    finance_prev = {
+        "Revenue": _get_val(roi_prev, "Revenue"),
+        "Revenue Per Appointment": _get_val(roi_prev, "Revenue Per Appt"),
+        "# of Appointments": _get_val(roi_prev, "# of Appts"),
+    }
 
-        # display value
-        if now is None:
-            disp = "–"
-        elif label == "Leads Generated":
-            disp = f"{int(now)}"
-        else:
-            disp = f"${now:,.2f}"
+    def build_metric_cards(curr_dict, prev_dict):
+        """Helper function to build metric cards"""
+        cards = []
+        for label, now in curr_dict.items():
+            old = prev_dict[label]
 
-        # change + color
-        if old in [None, 0]:
-            ch, col = "–", "#999"
-        else:
-            d   = get_delta_percent(now, old)
-            ch  = format_with_change(now, old).split()[-1]
-            col = percent_to_color(d)
+            # display value
+            if now is None:
+                disp = "–"
+            elif label in ["Leads Generated", "# of Appointments"]:
+                disp = f"{int(now)}"
+            else:
+                disp = f"${now:,.2f}"
 
-        cards.append(
-            html.Div(
-                children=[
-                    html.H1(disp,
-                            style={"margin": 0, "fontSize": "56px", "color": col}),
-                    html.Div(label,
-                             style={"fontSize": "14px", "color": "gray"}),
-                    html.Div(
-                        [
-                            html.Span("1 Wk Ago: ",
-                                      style={"fontWeight": "bold"}),
-                            html.Span(
-                                f"{('$'+format(old,',.2f')) if old not in [None,0] and label!='Leads Generated' else (str(int(old)) if old not in [None,0] else '–')} ",
-                                style={"marginRight": "4px"},
-                            ),
-                            html.Span(ch,
-                                      style={"color": col,
-                                             "fontWeight": "bold"}),
-                        ],
-                        style={"fontSize": "13px", "marginTop": "4px"},
-                    ),
-                ],
-                style={"textAlign": "center", "flex": "1"},
+            # change + color
+            if old in [None, 0]:
+                ch, col = "–", "#999"
+            else:
+                d   = get_delta_percent(now, old)
+                ch  = format_with_change(now, old).split()[-1]
+                col = percent_to_color(d)
+
+            cards.append(
+                html.Div(
+                    children=[
+                        html.H1(disp,
+                                style={"margin": 0, "fontSize": "56px", "color": col}),
+                        html.Div(label,
+                                 style={"fontSize": "14px", "color": "gray"}),
+                        html.Div(
+                            [
+                                html.Span("1 Wk Ago: ",
+                                          style={"fontWeight": "bold"}),
+                                html.Span(
+                                    f"{('$'+format(old,',.2f')) if old not in [None,0] and label not in ['Leads Generated', '# of Appointments'] else (str(int(old)) if old not in [None,0] else '–')} ",
+                                    style={"marginRight": "4px"},
+                                ),
+                                html.Span(ch,
+                                          style={"color": col,
+                                                 "fontWeight": "bold"}),
+                            ],
+                            style={"fontSize": "13px", "marginTop": "4px"},
+                        ),
+                    ],
+                    style={"textAlign": "center", "flex": "1"},
+                )
             )
-        )
+        return cards
+
+    marketing_cards = build_metric_cards(marketing_curr, marketing_prev)
+    finance_cards = build_metric_cards(finance_curr, finance_prev)
     
     dashboard_sections=[
         # OPERATIONS SECTION COMMENTED OUT - REMOVED FROM DASHBOARD
@@ -1079,7 +1200,7 @@ def update_dashboard(selected_week, selected_franchisee="All"):
                     style={"textAlign": "center", "marginBottom": "20px"},
                     children=[
                         html.Button(
-                            "📈 Show Trend Chart",
+                            "Show Trend Chart",
                             id="cc-chart-toggle",
                             n_clicks=0,
                             style={
@@ -1351,7 +1472,68 @@ def update_dashboard(selected_week, selected_franchisee="All"):
                         "fontStyle": "italic",
                         "marginBottom": "24px",
                     },
-                ),   
+                ),
+                html.Div(
+                    id="finance-metrics-container",
+                    style={
+                        "display": "flex",
+                        "justifyContent": "center",
+                        "gap": "80px",
+                        "marginBottom": "16px",
+                        "marginTop": "16px",
+                    },
+                    children=finance_cards,
+                ),
+                # Line Chart Toggle Button
+                html.Div(
+                    style={"textAlign": "center", "marginBottom": "20px"},
+                    children=[
+                        html.Button(
+                            "📈 Show Trend Chart",
+                            id="fin-chart-toggle",
+                            n_clicks=0,
+                            style={
+                                "backgroundColor": "#2C3E70",
+                                "color": "white",
+                                "border": "none",
+                                "padding": "10px 20px",
+                                "fontSize": "14px",
+                                "borderRadius": "4px",
+                                "cursor": "pointer",
+                                "fontFamily": "Segoe UI, sans-serif"
+                            }
+                        )
+                    ]
+                ),
+                # Line Chart Section (hidden by default)
+                html.Div(
+                    id="fin-chart-container",
+                    style={"display": "none", "marginBottom": "30px"},
+                    children=[
+                        html.Div(
+                            style={"textAlign": "center", "marginBottom": "16px"},
+                            children=[
+                                dcc.RadioItems(
+                                    id="fin-metric-selector",
+                                    options=[
+                                        {"label": "  Revenue", "value": "revenue"},
+                                        {"label": "  Revenue Per Appointment", "value": "revenue_per_appt"},
+                                        {"label": "  # of Appointments", "value": "num_appts"}
+                                    ],
+                                    value="revenue",
+                                    inline=True,
+                                    style={"fontFamily": "Segoe UI, sans-serif", "fontSize": "14px"},
+                                    labelStyle={"marginRight": "20px", "cursor": "pointer"}
+                                )
+                            ]
+                        ),
+                        dcc.Graph(
+                            id="fin-line-chart",
+                            figure=build_finance_line_chart(roi_df, "revenue"),
+                            config={"displayModeBar": False}
+                        )
+                    ]
+                ),
             ]
         ),
 
@@ -1399,14 +1581,14 @@ def update_dashboard(selected_week, selected_franchisee="All"):
                         "marginBottom": "16px",
                         "marginTop": "16px",
                     },
-                    children=cards,
+                    children=marketing_cards,
                 ),
                 # Line Chart Toggle Button
                 html.Div(
                     style={"textAlign": "center", "marginBottom": "20px"},
                     children=[
                         html.Button(
-                            "📈 Show Trend Chart",
+                            "Show Trend Chart",
                             id="mkt-chart-toggle",
                             n_clicks=0,
                             style={
@@ -1433,11 +1615,11 @@ def update_dashboard(selected_week, selected_franchisee="All"):
                                 dcc.RadioItems(
                                     id="mkt-metric-selector",
                                     options=[
+                                        {"label": "  Cost Per Appointment", "value": "cost_per_appt"},
                                         {"label": "  Amount Invested", "value": "amount_invested"},
-                                        {"label": "  Leads Generated", "value": "leads_generated"},
-                                        {"label": "  Revenue Per Appointment", "value": "revenue_per_appt"}
+                                        {"label": "  Leads Generated", "value": "leads_generated"}
                                     ],
-                                    value="amount_invested",
+                                    value="cost_per_appt",
                                     inline=True,
                                     style={"fontFamily": "Segoe UI, sans-serif", "fontSize": "14px"},
                                     labelStyle={"marginRight": "20px", "cursor": "pointer"}
@@ -1446,7 +1628,7 @@ def update_dashboard(selected_week, selected_franchisee="All"):
                         ),
                         dcc.Graph(
                             id="mkt-line-chart",
-                            figure=build_marketing_line_chart(roi_df, "amount_invested"),
+                            figure=build_marketing_line_chart(roi_df, "cost_per_appt"),
                             config={"displayModeBar": False}
                         )
                     ]

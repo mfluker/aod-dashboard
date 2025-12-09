@@ -175,6 +175,28 @@ def update_mkt_chart(selected_metric):
     return build_marketing_line_chart(roi_all_df, selected_metric)
 
 
+# Finance Chart Toggle Callback
+@app.callback(
+    [Output("fin-chart-container", "style"),
+     Output("fin-chart-toggle", "children")],
+    Input("fin-chart-toggle", "n_clicks")
+)
+def toggle_fin_chart(n_clicks):
+    if n_clicks % 2 == 1:  # Odd clicks = show chart
+        return {"display": "block", "marginBottom": "30px"}, "📉 Hide Trend Chart"
+    else:  # Even clicks = hide chart
+        return {"display": "none", "marginBottom": "30px"}, "📈 Show Trend Chart"
+
+
+# Finance Metric Selector Callback
+@app.callback(
+    Output("fin-line-chart", "figure"),
+    Input("fin-metric-selector", "value")
+)
+def update_fin_chart(selected_metric):
+    return build_finance_line_chart(roi_all_df, selected_metric)
+
+
 # ─── 3. Run ─────────────────────────────────────────────────────────────────
 # FOR TESTING LOCALLY
 # if __name__ == "__main__":
