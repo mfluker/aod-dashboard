@@ -77,22 +77,24 @@ def parquet_has_week(df: pd.DataFrame, start: str, end: str) -> bool:
 
 def get_all_missing_weeks(df: pd.DataFrame) -> list[tuple[str, str]]:
     """
-    Get all missing weeks from the most recent week in the DataFrame to today.
+    Get ALL missing weeks from the earliest week in the DataFrame to today.
+    This includes any gaps in the historical data, not just recent missing weeks.
     Returns a list of (start_date, end_date) tuples in chronological order.
     """
-    # Get the most recent week in the dataframe
+    # Determine the starting point for checking
     if df.empty or "week_start" not in df.columns:
         # If no data exists, start from 3 months ago
         start_from = date.today() - timedelta(weeks=12)
     else:
-        latest_week_start = pd.to_datetime(df["week_start"]).max()
-        start_from = latest_week_start.date() + timedelta(days=7)  # Next week after the latest
+        # Start from the EARLIEST week in the data, not the latest
+        earliest_week_start = pd.to_datetime(df["week_start"]).min()
+        start_from = earliest_week_start.date()
 
     # Get the most recent complete week
     current_week_start, current_week_end = get_last_full_week(date.today())
     current_week_start_date = datetime.strptime(current_week_start, "%m/%d/%Y").date()
 
-    # Generate all weeks from start_from to current
+    # Generate all weeks from start_from to current and check which ones are missing
     missing_weeks = []
     week_cursor = start_from
 
@@ -119,8 +121,10 @@ def get_all_missing_weeks(df: pd.DataFrame) -> list[tuple[str, str]]:
 
 def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFrame, roi_df: pd.DataFrame):
     """
-    Fetch and append ALL missing weeks from the most recent data to today.
-    This ensures all gaps are filled, not just the latest week.
+    Fetch and append ALL missing weeks from the earliest data to today.
+    This ensures all gaps in the historical data are filled, including:
+    - Missing weeks between the earliest and latest data (e.g., Sept-Nov gaps)
+    - Missing weeks from the latest data to today
     """
     # Robust path pointing to top-level Master_Data directory
     base_dir = Path(__file__).resolve().parent.parent / "dashboard" / "Master_Data"
@@ -134,14 +138,23 @@ def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFram
     # JOBS DATA FETCHING COMMENTED OUT - REMOVED FROM DASHBOARD
     print(f"⏭️  Skipping Jobs data (feature removed from dashboard)")
 
+    # Show current data range
+    if not calls_df.empty:
+        earliest = pd.to_datetime(calls_df["week_start"]).min().strftime("%m/%d/%Y")
+        latest = pd.to_datetime(calls_df["week_end"]).max().strftime("%m/%d/%Y")
+        print(f"\n📊 Current data range: {earliest} to {latest}")
+    else:
+        print(f"\n📊 No existing data found")
+
     # Get all missing weeks for Call Center data (use calls_df as reference)
+    print(f"🔍 Checking for missing weeks from earliest date to today...")
     missing_weeks = get_all_missing_weeks(calls_df)
 
     if not missing_weeks:
         print(f"✅ All data is up to date! No missing weeks found.")
         return jobs_df, calls_df, roi_df
 
-    print(f"📅 Found {len(missing_weeks)} missing week(s) to fetch:")
+    print(f"\n📅 Found {len(missing_weeks)} missing week(s) to fetch:")
     for start, end in missing_weeks:
         print(f"   • {start} – {end}")
 
@@ -174,9 +187,11 @@ def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFram
 
     # Save all updated data at once
     print(f"\n💾 Saving updated data to Parquet files...")
+    print(f"  • Saving Call Center data to: {calls_path}")
     calls_df.to_parquet(calls_path, index=False)
+    print(f"  • Saving ROI data to: {roi_path}")
     roi_df.to_parquet(roi_path, index=False)
-    print(f"✅ All {len(missing_weeks)} week(s) saved successfully!")
+    print(f"✅ All {len(missing_weeks)} week(s) saved successfully to Master_Data!")
 
     return jobs_df, calls_df, roi_df
 

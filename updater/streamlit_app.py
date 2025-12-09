@@ -304,12 +304,17 @@ if valid_cookies:
 
                 # Debug information
                 st.write("📊 Current data status:")
-                st.write(f"• Call Center latest week: {calls_df['week_end'].max()}")
-                st.write(f"• ROI latest week: {roi_df['week_end'].max()}")
+                if not calls_df.empty:
+                    import pandas as pd
+                    earliest = pd.to_datetime(calls_df["week_start"]).min().strftime("%m/%d/%Y")
+                    latest_end = calls_df['week_end'].max()
+                    st.write(f"• Data range: {earliest} to {latest_end}")
+                else:
+                    st.write("• No existing data")
                 st.write(f"• Last full week available: {get_last_full_week(date.today())[1]}")
 
                 # Fetch and append new data if needed
-                status.update(label="🔍 Checking for new data...")
+                status.update(label="🔍 Checking for ALL missing weeks (including historical gaps)...")
                 jobs_df, calls_df, roi_df = fetch_and_append_week_if_needed(jobs_df, calls_df, roi_df)
                 
                 st.markdown("""
@@ -324,15 +329,22 @@ if valid_cookies:
                 repo = st.secrets["GH_REPO"]
                 username = st.secrets["GH_USERNAME"]
                 remote_url = f"https://{username}:{token}@github.com/{repo}.git"
-                
+
                 with tempfile.TemporaryDirectory() as tmpdir:
                     tmp_path = Path(tmpdir)
                     subprocess.run(["git", "clone", remote_url, str(tmp_path)], check=True)
-            
+
                     status.update(label="📂 Copying updated Parquet files...")
                     dest = tmp_path / "dashboard" / "Master_Data"
                     dest.mkdir(exist_ok=True)
-                    for f in Path("dashboard/Master_Data").glob("*.parquet"):
+                    # Use absolute path to Master_Data directory
+                    master_data_dir = Path(__file__).resolve().parent.parent / "dashboard" / "Master_Data"
+
+                    # Debug: Show which files are being copied
+                    parquet_files = list(master_data_dir.glob("*.parquet"))
+                    st.write(f"📁 Copying {len(parquet_files)} parquet file(s) from {master_data_dir}")
+                    for f in parquet_files:
+                        st.write(f"  • {f.name}")
                         shutil.copy(f, dest / f.name)
             
                     subprocess.run(["git", "config", "--global", "user.name", "AoD Updater Bot"], check=True)
