@@ -34,7 +34,7 @@ def load_master_data():
     
 
 def get_delta_percent(current, previous):
-    if previous in [None, 0]:
+    if current is None or previous is None or previous == 0:
         return None
     return ((current - previous) / previous) * 100
 
