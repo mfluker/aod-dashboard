@@ -29,7 +29,8 @@ from bs4 import BeautifulSoup
 
 # # For Testing!
 
-COOKIE_PATH = "canvas_cookies.json"
+from pathlib import Path
+COOKIE_PATH = Path(__file__).parent / "canvas_cookies.json"
 
 
 def validate_canvas_cookies(cookie_path=None):
@@ -41,10 +42,13 @@ def validate_canvas_cookies(cookie_path=None):
         cookie_path = COOKIE_PATH
 
     from datetime import datetime
-    from pathlib import Path
+
+    # Convert to Path if string
+    if not isinstance(cookie_path, Path):
+        cookie_path = Path(cookie_path)
 
     # Check if file exists
-    if not Path(cookie_path).exists():
+    if not cookie_path.exists():
         return False, f"Cookie file not found at: {cookie_path}"
 
     try:
@@ -88,7 +92,7 @@ def get_session_with_canvas_cookie():
     Load cookies from COOKIE_PATH and return a requests.Session
     that only sets name, value, domain, path, secure, and expires.
     """
-    with open(COOKIE_PATH, "r") as f:
+    with open(str(COOKIE_PATH), "r") as f:
         raw_cookies = json.load(f)
 
     session = requests.Session()
@@ -357,7 +361,8 @@ def fetch_roi(start: str, end: str, session: requests.Session) -> pd.DataFrame:
     print(f"   📄 Full HTML saved to: {debug_file}")
 
     # CHECK FOR LOGIN PAGE (Authentication failure detection)
-    if "Login Required" in r.text or "logged in" in r.text.lower():
+    # Look for actual login failure, not success messages like "You are logged into Canvas"
+    if "Login Required" in r.text or ">Please log in<" in r.text or "login.html" in r.text.lower():
         print(f"\n❌ AUTHENTICATION FAILED!")
         print(f"   Canvas returned a login page instead of data.")
         print(f"   Your cookies have likely expired or are invalid.")
