@@ -158,6 +158,18 @@ def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFram
     for start, end in missing_weeks:
         print(f"   • {start} – {end}")
 
+    # VALIDATE COOKIES BEFORE FETCHING
+    print(f"\n🔐 Validating Canvas authentication cookies...")
+    is_valid, message = data_fetcher.validate_canvas_cookies()
+    if not is_valid:
+        print(f"❌ COOKIE VALIDATION FAILED: {message}")
+        print(f"   Cannot proceed with data fetch.")
+        print(f"   Please refresh your canvas_cookies.json file and try again.")
+        # Return original data without changes
+        return jobs_df, calls_df, roi_df
+    else:
+        print(f"✅ {message}")
+
     # Fetch each missing week
     for week_num, (start, end) in enumerate(missing_weeks, 1):
         print(f"\n📦 Fetching week {week_num}/{len(missing_weeks)}: {start} – {end}")
@@ -178,6 +190,21 @@ def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFram
         # Fetch ROI data
         print(f"  💰 Fetching ROI data...")
         new_roi = data_fetcher.fetch_roi(start, end, session)
+
+        # VALIDATION: Check if ROI data is empty or invalid
+        if new_roi.empty:
+            print(f"  ❌ WARNING: ROI data fetch returned EMPTY DataFrame!")
+            print(f"     This usually means Canvas authentication failed or no data exists for this week.")
+            print(f"     Week: {start} – {end}")
+            print(f"     Check the debug HTML file at: /tmp/roi_debug_{start.replace('/', '-')}_{end.replace('/', '-')}.html")
+        else:
+            print(f"  ✅ ROI data received: {new_roi.shape[0]} row(s), {new_roi.shape[1]} column(s)")
+            print(f"     Columns: {list(new_roi.columns)}")
+            # Show first row values to verify it's not all zeros
+            if len(new_roi) > 0:
+                first_row_sample = {col: new_roi[col].iloc[0] for col in list(new_roi.columns)[:5]}
+                print(f"     Sample values: {first_row_sample}")
+
         new_roi["week_start"] = start
         new_roi["week_end"] = end
 
@@ -190,6 +217,27 @@ def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFram
     print(f"  • Saving Call Center data to: {calls_path}")
     calls_df.to_parquet(calls_path, index=False)
     print(f"  • Saving ROI data to: {roi_path}")
+
+    # FINAL VALIDATION: Check the ROI data we're about to save
+    print(f"\n🔍 Final ROI Data Validation:")
+    print(f"  Total ROI rows: {len(roi_df)}")
+
+    # Check how many rows for the newly added weeks
+    new_roi_rows = roi_df[roi_df['week_start'].isin([w[0] for w in missing_weeks])]
+    print(f"  New ROI rows added: {len(new_roi_rows)}")
+
+    if len(new_roi_rows) == 0:
+        print(f"  ⚠️  WARNING: No new ROI data was added for the missing weeks!")
+        print(f"     This likely means all fetch_roi calls returned empty DataFrames.")
+        print(f"     Check authentication and Canvas access.")
+    else:
+        # Show sample of new data
+        print(f"  ✅ New ROI data preview:")
+        for _, row in new_roi_rows.head(3).iterrows():
+            sample_cols = [col for col in row.index if col not in ['week_start', 'week_end']][:3]
+            sample_data = {col: row[col] for col in sample_cols}
+            print(f"     Week {row['week_start']}-{row['week_end']}: {sample_data}")
+
     roi_df.to_parquet(roi_path, index=False)
     print(f"✅ All {len(missing_weeks)} week(s) saved successfully to Master_Data!")
 

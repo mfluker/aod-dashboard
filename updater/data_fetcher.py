@@ -32,6 +32,57 @@ from bs4 import BeautifulSoup
 COOKIE_PATH = "canvas_cookies.json"
 
 
+def validate_canvas_cookies(cookie_path=None):
+    """
+    Validate that Canvas cookies exist and are not expired.
+    Returns: (is_valid, message)
+    """
+    if cookie_path is None:
+        cookie_path = COOKIE_PATH
+
+    from datetime import datetime
+    from pathlib import Path
+
+    # Check if file exists
+    if not Path(cookie_path).exists():
+        return False, f"Cookie file not found at: {cookie_path}"
+
+    try:
+        with open(cookie_path, "r") as f:
+            cookies = json.load(f)
+
+        if not cookies:
+            return False, "Cookie file is empty"
+
+        # Check for required cookies
+        cookie_names = [c.get("name") for c in cookies]
+        required = ["PHPSESSID", "username"]
+        missing = [r for r in required if r not in cookie_names]
+
+        if missing:
+            return False, f"Missing required cookies: {missing}"
+
+        # Check expiration
+        now = datetime.now()
+        expired_cookies = []
+
+        for cookie in cookies:
+            name = cookie.get("name")
+            if "expirationDate" in cookie:
+                exp_timestamp = int(cookie["expirationDate"])
+                exp_date = datetime.fromtimestamp(exp_timestamp)
+                if exp_date < now:
+                    expired_cookies.append(f"{name} (expired {exp_date.strftime('%Y-%m-%d %H:%M')})")
+
+        if expired_cookies:
+            return False, f"Expired cookies: {', '.join(expired_cookies)}"
+
+        return True, "Cookies are valid"
+
+    except Exception as e:
+        return False, f"Error reading cookies: {str(e)}"
+
+
 def get_session_with_canvas_cookie():
     """
     Load cookies from COOKIE_PATH and return a requests.Session
@@ -265,8 +316,16 @@ def load_conversion_data(start_date: str, end_date: str, include_homeshow: bool 
 
 # Marekting Pull
 def fetch_roi(start: str, end: str, session: requests.Session) -> pd.DataFrame:
+    print(f"\n{'='*60}")
+    print(f"🔍 DEBUG: fetch_roi called with:")
+    print(f"   Start date: {start}")
+    print(f"   End date: {end}")
+    print(f"   Session provided: {session is not None}")
+
     session = get_session_with_canvas_cookie()
-    
+    print(f"   Session recreated (overwrites passed session)")
+    print(f"   Cookies loaded: {len(session.cookies)} cookies")
+
     url = "https://canvas.artofdrawers.com/scripts/marketing_roi.html"
     # hard-coded campaigns; change if you want dynamic
     campaign_ids = [62,59,21,63,64,60,61]
@@ -275,25 +334,101 @@ def fetch_roi(start: str, end: str, session: requests.Session) -> pd.DataFrame:
         ("ed", end),
         ("submit", "Generate Report")
     ]
-    r = session.get(url, params=params)
-    r.raise_for_status()
+
+    print(f"\n📡 Making request to Canvas:")
+    print(f"   URL: {url}")
+    print(f"   Campaign IDs: {campaign_ids}")
+    print(f"   Date range params: sd={start}, ed={end}")
+
+    try:
+        r = session.get(url, params=params)
+        print(f"\n✅ Response received:")
+        print(f"   Status code: {r.status_code}")
+        print(f"   Response size: {len(r.text)} characters")
+        r.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"\n❌ HTTP Request failed: {e}")
+        return pd.DataFrame()
+
+    # Save response for inspection
+    debug_file = f"/tmp/roi_debug_{start.replace('/', '-')}_{end.replace('/', '-')}.html"
+    with open(debug_file, 'w') as f:
+        f.write(r.text)
+    print(f"   📄 Full HTML saved to: {debug_file}")
+
+    # CHECK FOR LOGIN PAGE (Authentication failure detection)
+    if "Login Required" in r.text or "logged in" in r.text.lower():
+        print(f"\n❌ AUTHENTICATION FAILED!")
+        print(f"   Canvas returned a login page instead of data.")
+        print(f"   Your cookies have likely expired or are invalid.")
+        print(f"   Please refresh your canvas_cookies.json file.")
+        print(f"   See HTML at: {debug_file}")
+        return pd.DataFrame()
+
     soup = BeautifulSoup(r.text, "html.parser")
 
-    # find “Grand Totals” two-row table
+    # Debug: Find all tables
+    all_tables = soup.find_all("table")
+    print(f"\n🔎 HTML Parsing:")
+    print(f"   Total tables found: {len(all_tables)}")
+
+    # Debug: Find all th elements with rowspan="2"
+    rowspan_ths = soup.find_all("th", {"rowspan": "2"})
+    print(f"   TH elements with rowspan=2: {len(rowspan_ths)}")
+    for i, th in enumerate(rowspan_ths):
+        print(f"      [{i}] Text: '{th.get_text(strip=True)}'")
+
+    # find "Grand Totals" two-row table
     grand_th = next(
         (th for th in soup.find_all("th", {"rowspan": "2"})
          if "Grand" in th.get_text()), None
     )
+
     if not grand_th:
-        logging.warning(f"No ROI Grand Totals for {start}–{end}")
+        print(f"\n❌ WARNING: No ROI Grand Totals table found for {start}–{end}")
+        print(f"   This means the HTML structure didn't contain a <th rowspan='2'> with 'Grand' in it")
+        print(f"   Check the HTML file at: {debug_file}")
         return pd.DataFrame()
 
-    tbl = grand_th.find_parent("table")
-    # headers = first <tr>, values = second <tr>
-    hdrs = [th.get_text(strip=True).replace("\n"," ") for th in tbl.find_all("tr")[0].find_all("th")]
-    vals = [td.get_text(strip=True) for td in tbl.find_all("tr")[1].find_all("td")]
+    print(f"\n✅ Found Grand Totals table!")
+    print(f"   Grand Totals TH text: '{grand_th.get_text(strip=True)}'")
 
-    df = pd.DataFrame([vals], columns=hdrs[1:])  # drop the rowspan “Grand Totals” header
+    tbl = grand_th.find_parent("table")
+    print(f"   Parent table found: {tbl is not None}")
+
+    # headers = first <tr>, values = second <tr>
+    all_rows = tbl.find_all("tr")
+    print(f"   Total rows in table: {len(all_rows)}")
+
+    if len(all_rows) < 2:
+        print(f"❌ ERROR: Not enough rows in table (need at least 2, got {len(all_rows)})")
+        return pd.DataFrame()
+
+    hdrs = [th.get_text(strip=True).replace("\n"," ") for th in all_rows[0].find_all("th")]
+    vals = [td.get_text(strip=True) for td in all_rows[1].find_all("td")]
+
+    print(f"\n📊 Extracted data:")
+    print(f"   Headers ({len(hdrs)}): {hdrs}")
+    print(f"   Values ({len(vals)}): {vals}")
+
+    if len(hdrs) == 0 or len(vals) == 0:
+        print(f"❌ ERROR: No data extracted (headers or values empty)")
+        return pd.DataFrame()
+
+    if len(vals) != len(hdrs) - 1:
+        print(f"⚠️  WARNING: Value count mismatch!")
+        print(f"   Expected {len(hdrs)-1} values, got {len(vals)}")
+
+    df = pd.DataFrame([vals], columns=hdrs[1:])  # drop the rowspan "Grand Totals" header
     df["week_start"] = start
     df["week_end"]   = end
+
+    print(f"\n✅ DataFrame created:")
+    print(f"   Shape: {df.shape}")
+    print(f"   Columns: {list(df.columns)}")
+    print(f"   First row values:")
+    for col in df.columns:
+        print(f"      {col}: {df[col].iloc[0]}")
+    print(f"{'='*60}\n")
+
     return df
