@@ -164,12 +164,12 @@ def format_with_change(current: float, previous: float) -> str:
     """
     Returns formatted string with % change tooltip: "123 (↑12.5%)" or "95 (↓8.1%)"
     """
-    if previous in [None, 0]:
-        return f"{int(current)}"
+    if current is None or previous is None or previous == 0:
+        return f"{int(current) if current is not None else 0}"
 
     delta = ((current - previous) / previous) * 100
     arrow = "↑" if delta > 0 else "↓"
-    
+
     return f"{int(current)} ({arrow}{abs(delta):.1f}%)"
 
 
