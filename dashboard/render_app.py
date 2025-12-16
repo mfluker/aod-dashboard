@@ -26,6 +26,24 @@ jobs_all_df = pd.read_parquet(MASTER_JOBS_PARQUET)
 calls_all_df = pd.read_parquet(MASTER_CALLS_PARQUET)
 roi_all_df = pd.read_parquet(MASTER_ROI_PARQUET)
 
+# Get last updated timestamp from parquet files
+def get_last_updated():
+    """Get the most recent modification time of the parquet files"""
+    try:
+        times = []
+        for f in [MASTER_CALLS_PARQUET, MASTER_ROI_PARQUET]:
+            if f.exists():
+                times.append(f.stat().st_mtime)
+        if times:
+            latest = max(times)
+            dt = datetime.fromtimestamp(latest)
+            return dt.strftime("%B %d, %Y at %I:%M %p")
+        return "Unknown"
+    except:
+        return "Unknown"
+
+last_updated = get_last_updated()
+
 
 # ─── 1. Instantiate Dash App & Layout ─────────────────────────────────────
 # JOBS REMOVED - using calls_all_df for week options instead
@@ -53,6 +71,17 @@ app.layout = html.Div(
                 "marginBottom": "10px",
                 "color": "#2C3E70",
                 "textAlign": "center",
+            },
+        ),
+        # Last Updated Timestamp
+        html.Div(
+            f"Last Updated: {last_updated}",
+            style={
+                "textAlign": "center",
+                "fontSize": "12px",
+                "color": "#666",
+                "fontStyle": "italic",
+                "marginBottom": "20px",
             },
         ),
         # Select Week Drop Down

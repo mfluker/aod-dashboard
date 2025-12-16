@@ -205,6 +205,22 @@ def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFram
                 first_row_sample = {col: new_roi[col].iloc[0] for col in list(new_roi.columns)[:5]}
                 print(f"     Sample values: {first_row_sample}")
 
+                # Check for suspicious zero/empty data
+                if 'Amount Invested' in new_roi.columns and 'Revenue' in new_roi.columns:
+                    amount_str = str(new_roi['Amount Invested'].iloc[0]).replace('$', '').replace(',', '').strip()
+                    revenue_str = str(new_roi['Revenue'].iloc[0]).replace('$', '').replace(',', '').strip()
+
+                    try:
+                        amount_val = float(amount_str) if amount_str not in ['', '-', 'nan'] else 0
+                        revenue_val = float(revenue_str) if revenue_str not in ['', '-', 'nan'] else 0
+
+                        if amount_val == 0 and revenue_val == 0:
+                            print(f"  ⚠️  SUSPICIOUS: Both Amount Invested and Revenue are $0.00!")
+                            print(f"     This may indicate authentication failure or genuinely no activity this week.")
+                            print(f"     Review the debug HTML at: /tmp/roi_debug_{start.replace('/', '-')}_{end.replace('/', '-')}.html")
+                    except:
+                        pass
+
         new_roi["week_start"] = start
         new_roi["week_end"] = end
 

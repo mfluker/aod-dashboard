@@ -123,11 +123,34 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# --- GET LAST UPDATE INFO ---
+def get_last_data_update():
+    """Get the timestamp of the last data update from parquet files"""
+    from pathlib import Path
+    from datetime import datetime
+
+    master_data_dir = Path(__file__).resolve().parent.parent / "dashboard" / "Master_Data"
+    roi_file = master_data_dir / "all_roi_data.parquet"
+
+    try:
+        if roi_file.exists():
+            mtime = roi_file.stat().st_mtime
+            dt = datetime.fromtimestamp(mtime)
+            return dt.strftime("%B %d, %Y at %I:%M %p")
+        return "Unknown"
+    except:
+        return "Unknown"
+
+last_update = get_last_data_update()
+
 # --- HERO SECTION ---
-st.markdown("""
+st.markdown(f"""
 <div class="hero-section">
     <div class="hero-title">📦 AoD Data Updater</div>
     <div class="hero-subtitle">Fetch and push weekly data updates to your dashboard</div>
+    <div style="margin-top: 10px; font-size: 0.9rem; opacity: 0.8;">
+        Last Data Update: {last_update}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
