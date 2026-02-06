@@ -295,8 +295,9 @@ if uploaded_cookie:
             </div>
             """, unsafe_allow_html=True)
             valid_cookies = True
-            # Save cookies to file for later use
-            Path("canvas_cookies.json").write_bytes(uploaded_cookie.read())
+            # Save cookies to the updater directory where data_fetcher.py expects them
+            cookie_dest = Path(__file__).resolve().parent / "canvas_cookies.json"
+            cookie_dest.write_bytes(uploaded_cookie.read())
     else:
         st.markdown("""
         <div class="error-box">
