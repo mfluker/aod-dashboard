@@ -459,10 +459,34 @@ def build_call_center_line_chart(calls_all_df, selected_metric="touches"):
         x=df["week_label"],
         y=y_values,
         mode="lines+markers",
-        line=dict(color=color, width=3),
-        marker=dict(size=8, color=color),
+        line=dict(color=color, width=3, shape="spline", smoothing=1.0),
+        marker=dict(size=6, color=color),
+        fill="tozeroy",
+        fillcolor="rgba(44, 62, 112, 0.06)",
         hovertemplate="Week of %{x}<br>Count: %{y}<extra></extra>"
     ))
+
+    # Best/Worst week annotations
+    if len(y_values) > 1:
+        best_idx = y_values.idxmax()
+        worst_idx = y_values.idxmin()
+        fig.add_annotation(
+            x=df.loc[best_idx, "week_label"], y=y_values[best_idx],
+            text=f"Best: {int(y_values[best_idx])}",
+            showarrow=True, arrowhead=2, arrowcolor="#2c662d",
+            font=dict(color="#2c662d", size=11, family="Segoe UI, sans-serif"),
+            bgcolor="rgba(230,255,237,0.9)", bordercolor="#2c662d", borderpad=4,
+            ax=0, ay=-30
+        )
+        if best_idx != worst_idx:
+            fig.add_annotation(
+                x=df.loc[worst_idx, "week_label"], y=y_values[worst_idx],
+                text=f"Low: {int(y_values[worst_idx])}",
+                showarrow=True, arrowhead=2, arrowcolor="#c62828",
+                font=dict(color="#c62828", size=11, family="Segoe UI, sans-serif"),
+                bgcolor="rgba(255,235,230,0.9)", bordercolor="#c62828", borderpad=4,
+                ax=0, ay=30
+            )
 
     fig.update_layout(
         title=dict(
@@ -560,10 +584,39 @@ def build_marketing_line_chart(roi_all_df, selected_metric="cost_per_appt"):
         x=roi_data["week_label"],
         y=roi_data["value"],
         mode="lines+markers",
-        line=dict(color="#2C3E70", width=3),
-        marker=dict(size=8, color="#2C3E70"),
+        line=dict(color="#2C3E70", width=3, shape="spline", smoothing=1.0),
+        marker=dict(size=6, color="#2C3E70"),
+        fill="tozeroy",
+        fillcolor="rgba(44, 62, 112, 0.06)",
         hovertemplate=f"Week of %{{x}}<br>{hover_format}<extra></extra>"
     ))
+
+    # Best/Worst week annotations
+    values = roi_data["value"].reset_index(drop=True)
+    labels = roi_data["week_label"].reset_index(drop=True)
+    if len(values) > 1:
+        best_idx = values.idxmax()
+        worst_idx = values.idxmin()
+        is_dollar = "$" in hover_format
+        best_text = f"Best: ${values[best_idx]:,.0f}" if is_dollar else f"Best: {int(values[best_idx])}"
+        worst_text = f"Low: ${values[worst_idx]:,.0f}" if is_dollar else f"Low: {int(values[worst_idx])}"
+        fig.add_annotation(
+            x=labels[best_idx], y=values[best_idx],
+            text=best_text,
+            showarrow=True, arrowhead=2, arrowcolor="#2c662d",
+            font=dict(color="#2c662d", size=11, family="Segoe UI, sans-serif"),
+            bgcolor="rgba(230,255,237,0.9)", bordercolor="#2c662d", borderpad=4,
+            ax=0, ay=-30
+        )
+        if best_idx != worst_idx:
+            fig.add_annotation(
+                x=labels[worst_idx], y=values[worst_idx],
+                text=worst_text,
+                showarrow=True, arrowhead=2, arrowcolor="#c62828",
+                font=dict(color="#c62828", size=11, family="Segoe UI, sans-serif"),
+                bgcolor="rgba(255,235,230,0.9)", bordercolor="#c62828", borderpad=4,
+                ax=0, ay=30
+            )
 
     fig.update_layout(
         title=dict(
@@ -661,10 +714,39 @@ def build_finance_line_chart(roi_all_df, selected_metric="revenue"):
         x=roi_data["week_label"],
         y=roi_data["value"],
         mode="lines+markers",
-        line=dict(color="#2C3E70", width=3),
-        marker=dict(size=8, color="#2C3E70"),
+        line=dict(color="#2C3E70", width=3, shape="spline", smoothing=1.0),
+        marker=dict(size=6, color="#2C3E70"),
+        fill="tozeroy",
+        fillcolor="rgba(44, 62, 112, 0.06)",
         hovertemplate=f"Week of %{{x}}<br>{hover_format}<extra></extra>"
     ))
+
+    # Best/Worst week annotations
+    values = roi_data["value"].reset_index(drop=True)
+    labels = roi_data["week_label"].reset_index(drop=True)
+    if len(values) > 1:
+        best_idx = values.idxmax()
+        worst_idx = values.idxmin()
+        is_dollar = "$" in hover_format
+        best_text = f"Best: ${values[best_idx]:,.0f}" if is_dollar else f"Best: {int(values[best_idx])}"
+        worst_text = f"Low: ${values[worst_idx]:,.0f}" if is_dollar else f"Low: {int(values[worst_idx])}"
+        fig.add_annotation(
+            x=labels[best_idx], y=values[best_idx],
+            text=best_text,
+            showarrow=True, arrowhead=2, arrowcolor="#2c662d",
+            font=dict(color="#2c662d", size=11, family="Segoe UI, sans-serif"),
+            bgcolor="rgba(230,255,237,0.9)", bordercolor="#2c662d", borderpad=4,
+            ax=0, ay=-30
+        )
+        if best_idx != worst_idx:
+            fig.add_annotation(
+                x=labels[worst_idx], y=values[worst_idx],
+                text=worst_text,
+                showarrow=True, arrowhead=2, arrowcolor="#c62828",
+                font=dict(color="#c62828", size=11, family="Segoe UI, sans-serif"),
+                bgcolor="rgba(255,235,230,0.9)", bordercolor="#c62828", borderpad=4,
+                ax=0, ay=30
+            )
 
     fig.update_layout(
         title=dict(
@@ -694,6 +776,88 @@ def build_finance_line_chart(roi_all_df, selected_metric="revenue"):
         gridcolor="#e1e8ed",
         showline=True,
         linecolor="#2C3E70"
+    )
+
+    return fig
+
+
+def build_conversion_funnel(roi_curr):
+    """
+    Build a conversion funnel chart: Leads -> Appointments -> Sales
+    from the current week's ROI data.
+    """
+    def _extract(val):
+        if pd.isna(val):
+            return 0
+        if isinstance(val, (int, float)):
+            return float(val)
+        cleaned = re.sub(r"[^\d\.\-]", "", str(val))
+        try:
+            return float(cleaned)
+        except ValueError:
+            return 0
+
+    if roi_curr.empty:
+        return go.Figure().update_layout(
+            title="No data available",
+            font=dict(family="Segoe UI, sans-serif", color="#2C3E70")
+        )
+
+    row = roi_curr.iloc[0]
+    leads = _extract(row.get("# of Leads", 0))
+    appts = _extract(row.get("# of Appts", 0))
+    sales = _extract(row.get("# of Sales", 0))
+
+    stages = ["Leads", "Appointments", "Sales"]
+    values = [leads, appts, sales]
+    colors = ["#3b82f6", "#2C3E70", "#1b5e20"]
+
+    # Compute conversion rates between stages
+    lead_to_appt = f"{(appts / leads * 100):.1f}%" if leads > 0 else "–"
+    appt_to_sale = f"{(sales / appts * 100):.1f}%" if appts > 0 else "–"
+    lead_to_sale = f"{(sales / leads * 100):.1f}%" if leads > 0 else "–"
+
+    fig = go.Figure(go.Funnel(
+        y=stages,
+        x=values,
+        textinfo="value+percent initial",
+        textposition="inside",
+        marker=dict(color=colors),
+        connector=dict(line=dict(color="#e1e8ed", width=2)),
+        hovertemplate="%{y}: %{x}<br>%{percentInitial} of leads<extra></extra>"
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text="Conversion Funnel",
+            font=dict(family="Segoe UI, sans-serif", size=18, color="#2C3E70")
+        ),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        font=dict(family="Segoe UI, sans-serif", size=14, color="#2C3E70"),
+        height=300,
+        margin=dict(t=50, b=20, l=80, r=40),
+        annotations=[
+            dict(
+                x=1.0, y=0.75, xref="paper", yref="paper",
+                text=f"Lead-to-Appt: {lead_to_appt}",
+                showarrow=False,
+                font=dict(size=12, color="#2C3E70", family="Segoe UI, sans-serif"),
+            ),
+            dict(
+                x=1.0, y=0.35, xref="paper", yref="paper",
+                text=f"Appt-to-Sale: {appt_to_sale}",
+                showarrow=False,
+                font=dict(size=12, color="#2C3E70", family="Segoe UI, sans-serif"),
+            ),
+            dict(
+                x=1.0, y=0.05, xref="paper", yref="paper",
+                text=f"Overall: {lead_to_sale}",
+                showarrow=False,
+                font=dict(size=12, color="#1b5e20", family="Segoe UI, sans-serif",
+                          weight="bold" if lead_to_sale != "–" else "normal"),
+            ),
+        ]
     )
 
     return fig
@@ -1582,6 +1746,12 @@ def update_dashboard(selected_week, selected_franchisee="All"):
                         "marginTop": "16px",
                     },
                     children=marketing_cards,
+                ),
+                # Conversion Funnel
+                dcc.Graph(
+                    id="conversion-funnel",
+                    figure=build_conversion_funnel(roi_curr),
+                    config={"displayModeBar": False}
                 ),
                 # Line Chart Toggle Button
                 html.Div(
