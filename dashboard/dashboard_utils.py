@@ -1061,7 +1061,7 @@ def build_revenue_projection_chart(appts_all_df, rpa_all_df):
 
     # Find the RPA column (handle different naming conventions)
     rpa_column = None
-    for col in ["Revenue per Appointment", "Revenue Per Appointment", "RPA"]:
+    for col in ["Revenue per Appointment", "Revenue Per Appointment", "Revenue perAppointment", "RPA"]:
         if col in rpa_data.columns:
             rpa_column = col
             break
@@ -1461,7 +1461,7 @@ def build_location_ranking_cards(rpa_df, sales_df):
 
         # Try different possible column names for RPA
         rpa_column = None
-        for col in ["Revenue per Appointment", "Revenue Per Appointment", "RPA"]:
+        for col in ["Revenue per Appointment", "Revenue Per Appointment", "Revenue perAppointment", "RPA"]:
             if col in rpa_df.columns:
                 rpa_column = col
                 break

@@ -727,11 +727,27 @@ def fetch_future_appointments(session: requests.Session = None) -> pd.DataFrame:
         if r_csv.status_code == 200 and "," in r_csv.text[:200]:
             print(f"   ✅ CSV export available, parsing...")
             df = pd.read_csv(StringIO(r_csv.text))
-            print(f"   ✅ Parsed {len(df)} appointments, columns: {list(df.columns)}")
-            if len(df) > 0:
-                print(f"   First row: {df.iloc[0].to_dict()}")
-            print(f"{'='*60}")
-            return df
+
+            # Filter out appointments from corporate/llc location
+            if "Location" in df.columns:
+                initial_count = len(df)
+                df = df[~df["Location"].str.contains("Art Of Drawers Llc", case=False, na=False)]
+                df = df[~df["Location"].str.contains("LocationArt Of Drawers Llc", case=False, na=False)]
+                filtered_count = initial_count - len(df)
+                if filtered_count > 0:
+                    print(f"   🚫 Filtered out {filtered_count} appointments from Art Of Drawers Llc")
+
+            print(f"   ✅ Parsed {len(df)} appointments (after filtering), columns: {list(df.columns)}")
+
+            # Note: CSV export may be limited to 100 rows by Canvas
+            if len(df) >= 100:
+                print(f"   ⚠️  CSV returned exactly 100 rows - may be truncated. Falling back to HTML pagination for complete data...")
+                # Fall through to HTML parsing with pagination
+            else:
+                if len(df) > 0:
+                    print(f"   First row: {df.iloc[0].to_dict()}")
+                print(f"{'='*60}")
+                return df
         else:
             print(f"   CSV export not available, falling back to HTML parsing")
     except Exception as e:
@@ -828,7 +844,16 @@ def fetch_future_appointments(session: requests.Session = None) -> pd.DataFrame:
             best_df = pd.concat(all_dfs, ignore_index=True)
             print(f"   ✅ Combined {len(all_dfs)} pages: {len(best_df)} total rows")
 
-    print(f"\n   ✅ Parsed {len(best_df)} rows, columns: {list(best_df.columns)}")
+    # Filter out appointments from corporate/llc location
+    if "Location" in best_df.columns:
+        initial_count = len(best_df)
+        best_df = best_df[~best_df["Location"].str.contains("Art Of Drawers Llc", case=False, na=False)]
+        best_df = best_df[~best_df["Location"].str.contains("LocationArt Of Drawers Llc", case=False, na=False)]
+        filtered_count = initial_count - len(best_df)
+        if filtered_count > 0:
+            print(f"   🚫 Filtered out {filtered_count} appointments from Art Of Drawers Llc")
+
+    print(f"\n   ✅ Parsed {len(best_df)} rows (after filtering), columns: {list(best_df.columns)}")
     if len(best_df) > 0:
         print(f"   First row: {best_df.iloc[0].to_dict()}")
     print(f"{'='*60}")
