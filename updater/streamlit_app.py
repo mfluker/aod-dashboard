@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from datetime import date
 
-from updater_utils import load_master_data, fetch_and_append_week_if_needed, get_last_full_week
+from updater_utils import load_master_data, fetch_and_append_week_if_needed, get_last_full_week, append_projections_if_needed
 
 # --- PAGE CONFIG ---
 st.set_page_config(
@@ -382,6 +382,32 @@ if valid_cookies:
                         ℹ️ No new data to fetch - all weeks are already present!
                     </div>
                     """, unsafe_allow_html=True)
+
+                # Fetch projections data (location rankings and future appointments)
+                status.update(label="📍 Fetching location rankings and future appointments...")
+                st.write("📍 **Fetching Location Performance Data...**")
+
+                try:
+                    rpa_df, sales_df, appts_df = append_projections_if_needed()
+
+                    if not rpa_df.empty or not sales_df.empty or not appts_df.empty:
+                        st.markdown(f"""
+                        <div class="success-box">
+                            ✅ Successfully fetched projections data!<br>
+                            📊 RPA Rankings: {len(rpa_df)} locations<br>
+                            📊 Sales Rankings: {len(sales_df)} locations<br>
+                            📊 Future Appointments: {len(appts_df)} appointments
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown("""
+                        <div class="info-box">
+                            ℹ️ Projections data already up to date!
+                        </div>
+                        """, unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f"⚠️ Error fetching projections data: {e}")
+                    st.write("Continuing with main data update...")
 
                 # --- COMMIT AND PUSH TO GITHUB ---
                 status.update(label="🛠 Cloning dashboard repo...")

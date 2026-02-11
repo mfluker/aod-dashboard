@@ -362,7 +362,7 @@ def fetch_roi(start: str, end: str, session: requests.Session) -> pd.DataFrame:
 
     # CHECK FOR LOGIN PAGE (Authentication failure detection)
     # Look for actual login failure, not success messages like "You are logged into Canvas"
-    if "Login Required" in r.text or ">Please log in<" in r.text or "login.html" in r.text.lower():
+    if "login required" in r.text.lower() or ">please log in<" in r.text.lower() or "<title>Login required</title>" in r.text:
         print(f"\n❌ AUTHENTICATION FAILED!")
         print(f"   Canvas returned a login page instead of data.")
         print(f"   Your cookies have likely expired or are invalid.")
@@ -437,3 +437,308 @@ def fetch_roi(start: str, end: str, session: requests.Session) -> pd.DataFrame:
     print(f"{'='*60}\n")
 
     return df
+
+
+# ─── Projections Data Fetchers ──────────────────────────────────────────────
+
+def _normalize_location(name: str) -> str:
+    """Normalize location names for consistent matching across data sources."""
+    if not name or not isinstance(name, str):
+        return ""
+    return name.strip().title()
+
+
+def _parse_canvas_tables(html_text: str, debug_label: str = "") -> list:
+    """
+    Parse all HTML tables from a Canvas page into list of (headers, rows) tuples.
+    Prints debug info about each table found.
+    """
+    soup = BeautifulSoup(html_text, "html.parser")
+    tables = soup.find_all("table")
+    print(f"\n🔎 {debug_label}: Found {len(tables)} table(s)")
+
+    results = []
+    for i, tbl in enumerate(tables):
+        rows = tbl.find_all("tr")
+        if not rows:
+            continue
+
+        # Try to extract headers from first row
+        header_cells = rows[0].find_all(["th", "td"])
+        headers = [cell.get_text(strip=True).replace("\n", " ") for cell in header_cells]
+
+        # Extract data rows
+        data_rows = []
+        for row in rows[1:]:
+            cells = row.find_all(["td", "th"])
+            values = [cell.get_text(strip=True) for cell in cells]
+            if values and any(v for v in values):
+                data_rows.append(values)
+
+        print(f"   Table {i}: {len(data_rows)} rows, headers: {headers[:6]}{'...' if len(headers) > 6 else ''}")
+        results.append((headers, data_rows))
+
+    return results
+
+
+def fetch_location_rpa(session: requests.Session = None) -> pd.DataFrame:
+    """
+    Fetch location Revenue Per Appointment rankings from Canvas.
+    Returns DataFrame with Location and Revenue_Per_Appt columns.
+    """
+    print(f"\n{'='*60}")
+    print(f"📊 Fetching Location RPA Rankings...")
+
+    if session is None:
+        session = get_session_with_canvas_cookie()
+
+    url = "https://canvas.artofdrawers.com/scripts/location_revenue_per_appointment_rankings.html"
+    params = {"presetdates": "l6m"}
+
+    try:
+        r = session.get(url, params=params)
+        print(f"   Status: {r.status_code}, Size: {len(r.text)} chars")
+    except Exception as e:
+        print(f"   ❌ Request failed: {e}")
+        return pd.DataFrame()
+
+    # Save debug HTML
+    debug_file = "/tmp/projections_rpa_rankings_debug.html"
+    with open(debug_file, "w") as f:
+        f.write(r.text)
+    print(f"   📄 Debug HTML: {debug_file}")
+
+    # Auth check
+    if "login required" in r.text.lower():
+        print(f"   ❌ Authentication failed")
+        return pd.DataFrame()
+
+    # Parse tables
+    tables = _parse_canvas_tables(r.text, "RPA Rankings")
+
+    if not tables:
+        print(f"   ❌ No tables found")
+        return pd.DataFrame()
+
+    # Find the data table (usually the largest one with location data)
+    best_df = pd.DataFrame()
+    for headers, data_rows in tables:
+        if len(data_rows) < 2 or len(headers) < 2:
+            continue
+
+        # Handle duplicate column names by adding suffixes
+        seen = {}
+        unique_headers = []
+        for header in headers:
+            if header in seen:
+                seen[header] += 1
+                unique_headers.append(f"{header}_{seen[header]}")
+            else:
+                seen[header] = 0
+                unique_headers.append(header)
+
+        # Build DataFrame, keeping only rows that match header length
+        valid_rows = [r for r in data_rows if len(r) == len(unique_headers)]
+        if valid_rows:
+            df = pd.DataFrame(valid_rows, columns=unique_headers)
+            if len(df) > len(best_df):
+                best_df = df
+
+    if best_df.empty:
+        print(f"   ❌ Could not parse any data table")
+        return pd.DataFrame()
+
+    print(f"\n   ✅ Parsed {len(best_df)} rows, columns: {list(best_df.columns)}")
+    print(f"   First row: {best_df.iloc[0].to_dict()}")
+    print(f"{'='*60}")
+    return best_df
+
+
+def fetch_location_sales(session: requests.Session = None) -> pd.DataFrame:
+    """
+    Fetch location sales rankings from Canvas.
+    Returns DataFrame with location sales data.
+    """
+    print(f"\n{'='*60}")
+    print(f"💰 Fetching Location Sales Rankings...")
+
+    if session is None:
+        session = get_session_with_canvas_cookie()
+
+    url = "https://canvas.artofdrawers.com/scripts/location_sales_rankings.html"
+    params = {"presetdates": "l6m"}
+
+    try:
+        r = session.get(url, params=params)
+        print(f"   Status: {r.status_code}, Size: {len(r.text)} chars")
+    except Exception as e:
+        print(f"   ❌ Request failed: {e}")
+        return pd.DataFrame()
+
+    debug_file = "/tmp/projections_sales_rankings_debug.html"
+    with open(debug_file, "w") as f:
+        f.write(r.text)
+    print(f"   📄 Debug HTML: {debug_file}")
+
+    if "login required" in r.text.lower():
+        print(f"   ❌ Authentication failed")
+        return pd.DataFrame()
+
+    tables = _parse_canvas_tables(r.text, "Sales Rankings")
+
+    if not tables:
+        print(f"   ❌ No tables found")
+        return pd.DataFrame()
+
+    best_df = pd.DataFrame()
+    for headers, data_rows in tables:
+        if len(data_rows) < 2 or len(headers) < 2:
+            continue
+
+        # Handle duplicate column names by adding suffixes
+        seen = {}
+        unique_headers = []
+        for header in headers:
+            if header in seen:
+                seen[header] += 1
+                # Rename duplicates: "% Diff" becomes "% Diff (vs Prior Period)", "% Diff (vs Previous Year)"
+                if header == "% Diff":
+                    if seen[header] == 1:
+                        unique_headers.append("% Diff (vs Prior Period)")
+                    else:
+                        unique_headers.append("% Diff (vs Previous Year)")
+                else:
+                    unique_headers.append(f"{header}_{seen[header]}")
+            else:
+                seen[header] = 0
+                unique_headers.append(header)
+
+        valid_rows = [r for r in data_rows if len(r) == len(unique_headers)]
+        if valid_rows:
+            df = pd.DataFrame(valid_rows, columns=unique_headers)
+            if len(df) > len(best_df):
+                best_df = df
+
+    if best_df.empty:
+        print(f"   ❌ Could not parse any data table")
+        return pd.DataFrame()
+
+    print(f"\n   ✅ Parsed {len(best_df)} rows, columns: {list(best_df.columns)}")
+    print(f"   First row: {best_df.iloc[0].to_dict()}")
+    print(f"{'='*60}")
+    return best_df
+
+
+def fetch_future_appointments(session: requests.Session = None) -> pd.DataFrame:
+    """
+    Fetch future design appointments from Canvas.
+    Returns DataFrame with one row per future appointment.
+    """
+    print(f"\n{'='*60}")
+    print(f"📅 Fetching Future Design Appointments...")
+
+    if session is None:
+        session = get_session_with_canvas_cookie()
+
+    url = "https://canvas.artofdrawers.com/listappointments.html"
+    params = {
+        "appointment_type_ids[]": "4",
+        "date_and_time_starts_r": "infuture",
+        "is_public_y": "y",
+        "is_public_n": "n",
+        "is_rescheduled_y": "y",
+        "is_rescheduled_n": "n",
+        "self_generated_y": "y",
+        "self_generated_n": "n",
+        "confirmed_y": "y",
+        "confirmed_n": "n",
+        "cancelled_y": "y",
+        "cancelled_n": "n",
+        "exclude_from_close_rate_y": "y",
+        "exclude_from_close_rate_n": "n",
+        "active_y": "y",
+        "sort_by": "date_added",
+        "sort_dir": "ASC",
+        "filter": "Submit",
+        "c[]": ["id", "location_id", "customer_id", "date_and_time_starts",
+                "siteuser_id", "is_rescheduled", "confirmed", "cancelled", "cancelled_by_id"],
+    }
+
+    try:
+        r = session.get(url, params=params)
+        print(f"   Status: {r.status_code}, Size: {len(r.text)} chars")
+    except Exception as e:
+        print(f"   ❌ Request failed: {e}")
+        return pd.DataFrame()
+
+    debug_file = "/tmp/projections_future_appts_debug.html"
+    with open(debug_file, "w") as f:
+        f.write(r.text)
+    print(f"   📄 Debug HTML: {debug_file}")
+
+    if "login required" in r.text.lower():
+        print(f"   ❌ Authentication failed")
+        return pd.DataFrame()
+
+    # Check for CSV export option (Canvas list pages often support this)
+    csv_url = "https://canvas.artofdrawers.com/scripts/report_as_spreadsheet.html?report=report_listappointments"
+    try:
+        r_csv = session.get(csv_url, headers={"Referer": url})
+        if r_csv.status_code == 200 and "," in r_csv.text[:200]:
+            print(f"   ✅ CSV export available, parsing...")
+            df = pd.read_csv(StringIO(r_csv.text))
+            print(f"   ✅ Parsed {len(df)} appointments, columns: {list(df.columns)}")
+            if len(df) > 0:
+                print(f"   First row: {df.iloc[0].to_dict()}")
+            print(f"{'='*60}")
+            return df
+        else:
+            print(f"   CSV export not available, falling back to HTML parsing")
+    except Exception as e:
+        print(f"   CSV export failed ({e}), falling back to HTML parsing")
+
+    # Fall back to HTML table parsing
+    tables = _parse_canvas_tables(r.text, "Future Appointments")
+
+    if not tables:
+        print(f"   ❌ No tables found")
+        return pd.DataFrame()
+
+    best_df = pd.DataFrame()
+    for headers, data_rows in tables:
+        if len(data_rows) < 1 or len(headers) < 2:
+            continue
+
+        # Handle duplicate column names by adding suffixes
+        seen = {}
+        unique_headers = []
+        for header in headers:
+            if header in seen:
+                seen[header] += 1
+                unique_headers.append(f"{header}_{seen[header]}")
+            else:
+                seen[header] = 0
+                unique_headers.append(header)
+
+        valid_rows = [row for row in data_rows if len(row) == len(unique_headers)]
+        if valid_rows:
+            df = pd.DataFrame(valid_rows, columns=unique_headers)
+            if len(df) > len(best_df):
+                best_df = df
+
+    if best_df.empty:
+        print(f"   ❌ Could not parse any data table")
+        return pd.DataFrame()
+
+    # Check for pagination
+    soup = BeautifulSoup(r.text, "html.parser")
+    page_links = soup.find_all("a", href=True, string=lambda s: s and s.strip().isdigit())
+    if page_links:
+        print(f"   ⚠️  Pagination detected ({len(page_links)} page links). Only first page parsed.")
+        print(f"   Additional pages may need to be fetched for complete data.")
+
+    print(f"\n   ✅ Parsed {len(best_df)} rows, columns: {list(best_df.columns)}")
+    if len(best_df) > 0:
+        print(f"   First row: {best_df.iloc[0].to_dict()}")
+    print(f"{'='*60}")
+    return best_df

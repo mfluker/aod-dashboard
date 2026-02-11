@@ -21,10 +21,18 @@ MASTERDATA_DIR = MASTERDATA_DIR = Path("Master_Data")
 MASTER_JOBS_PARQUET = MASTERDATA_DIR / "all_jobs_data.parquet"
 MASTER_CALLS_PARQUET = MASTERDATA_DIR / "all_call_center_data.parquet"
 MASTER_ROI_PARQUET = MASTERDATA_DIR / "all_roi_data.parquet"
+MASTER_RPA_PARQUET = MASTERDATA_DIR / "projections_rpa_data.parquet"
+MASTER_SALES_PARQUET = MASTERDATA_DIR / "projections_sales_data.parquet"
+MASTER_APPTS_PARQUET = MASTERDATA_DIR / "projections_appointments_data.parquet"
 
 jobs_all_df = pd.read_parquet(MASTER_JOBS_PARQUET)
 calls_all_df = pd.read_parquet(MASTER_CALLS_PARQUET)
 roi_all_df = pd.read_parquet(MASTER_ROI_PARQUET)
+
+# Load projections data (if files exist)
+rpa_all_df = pd.read_parquet(MASTER_RPA_PARQUET) if MASTER_RPA_PARQUET.exists() else pd.DataFrame()
+sales_all_df = pd.read_parquet(MASTER_SALES_PARQUET) if MASTER_SALES_PARQUET.exists() else pd.DataFrame()
+appts_all_df = pd.read_parquet(MASTER_APPTS_PARQUET) if MASTER_APPTS_PARQUET.exists() else pd.DataFrame()
 
 # Get last updated timestamp from parquet files
 def get_last_updated():

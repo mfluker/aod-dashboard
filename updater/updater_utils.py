@@ -119,6 +119,154 @@ def get_all_missing_weeks(df: pd.DataFrame) -> list[tuple[str, str]]:
     return missing_weeks
 
 
+def load_projections_data():
+    """Load projections parquet files. Returns empty DataFrames if files don't exist yet."""
+    master_data_dir = Path(__file__).resolve().parent.parent / "dashboard" / "Master_Data"
+    rpa_path = master_data_dir / "projections_rpa_data.parquet"
+    sales_path = master_data_dir / "projections_sales_data.parquet"
+    appts_path = master_data_dir / "projections_appointments_data.parquet"
+
+    rpa_df = pd.read_parquet(rpa_path) if rpa_path.exists() else pd.DataFrame()
+    sales_df = pd.read_parquet(sales_path) if sales_path.exists() else pd.DataFrame()
+    appts_df = pd.read_parquet(appts_path) if appts_path.exists() else pd.DataFrame()
+
+    return rpa_df, sales_df, appts_df
+
+
+def fetch_and_save_projections(week_start: str, week_end: str):
+    """
+    Fetch all projections data (RPA rankings, sales rankings, future appointments),
+    merge and save to parquet. Appends to existing data for time-series tracking.
+
+    Args:
+        week_start: Week start date in MM/DD/YYYY format
+        week_end: Week end date in MM/DD/YYYY format
+
+    Returns: (rpa_df, sales_df, appointments_df)
+    """
+    from datetime import datetime as dt
+
+    master_data_dir = Path(__file__).resolve().parent.parent / "dashboard" / "Master_Data"
+    rpa_path = master_data_dir / "projections_rpa_data.parquet"
+    sales_path = master_data_dir / "projections_sales_data.parquet"
+    appts_path = master_data_dir / "projections_appointments_data.parquet"
+
+    print(f"\n🔐 Validating Canvas authentication cookies...")
+    is_valid, message = data_fetcher.validate_canvas_cookies()
+    if not is_valid:
+        print(f"❌ COOKIE VALIDATION FAILED: {message}")
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+    print(f"✅ {message}")
+
+    session = data_fetcher.get_session_with_canvas_cookie()
+    fetched_at = dt.now().strftime("%B %d, %Y at %I:%M %p")
+
+    # Fetch RPA rankings
+    rpa_df = data_fetcher.fetch_location_rpa(session)
+    if not rpa_df.empty:
+        rpa_df["week_start"] = week_start
+        rpa_df["week_end"] = week_end
+        rpa_df["fetched_at"] = fetched_at
+        # Normalize location names
+        for col in rpa_df.columns:
+            if "location" in col.lower() or "name" in col.lower():
+                rpa_df[col] = rpa_df[col].apply(data_fetcher._normalize_location)
+                break
+
+    # Fetch sales rankings
+    sales_df = data_fetcher.fetch_location_sales(session)
+    if not sales_df.empty:
+        sales_df["week_start"] = week_start
+        sales_df["week_end"] = week_end
+        sales_df["fetched_at"] = fetched_at
+        # Normalize location names
+        for col in sales_df.columns:
+            if "location" in col.lower() or "name" in col.lower():
+                sales_df[col] = sales_df[col].apply(data_fetcher._normalize_location)
+                break
+
+    # Fetch future appointments
+    appts_df = data_fetcher.fetch_future_appointments(session)
+    if not appts_df.empty:
+        appts_df["week_start"] = week_start
+        appts_df["week_end"] = week_end
+        appts_df["fetched_at"] = fetched_at
+        # Normalize location names
+        for col in appts_df.columns:
+            if "location" in col.lower():
+                appts_df[col] = appts_df[col].apply(data_fetcher._normalize_location)
+                break
+
+    # Load existing data and append (time-series mode)
+    existing_rpa = pd.read_parquet(rpa_path) if rpa_path.exists() else pd.DataFrame()
+    existing_sales = pd.read_parquet(sales_path) if sales_path.exists() else pd.DataFrame()
+    existing_appts = pd.read_parquet(appts_path) if appts_path.exists() else pd.DataFrame()
+
+    # Remove any existing data for this week (deduplication) before appending
+    if not existing_rpa.empty and "week_start" in existing_rpa.columns:
+        existing_rpa = existing_rpa[~((existing_rpa["week_start"] == week_start) & (existing_rpa["week_end"] == week_end))]
+    if not existing_sales.empty and "week_start" in existing_sales.columns:
+        existing_sales = existing_sales[~((existing_sales["week_start"] == week_start) & (existing_sales["week_end"] == week_end))]
+    if not existing_appts.empty and "week_start" in existing_appts.columns:
+        existing_appts = existing_appts[~((existing_appts["week_start"] == week_start) & (existing_appts["week_end"] == week_end))]
+
+    # Append new data
+    if not rpa_df.empty:
+        combined_rpa = pd.concat([existing_rpa, rpa_df], ignore_index=True)
+        combined_rpa.to_parquet(rpa_path, index=False)
+        print(f"\n💾 Saved RPA data: {rpa_path} ({len(rpa_df)} new rows, {len(combined_rpa)} total)")
+    else:
+        print(f"\n⚠️  RPA data was empty, not saved")
+
+    if not sales_df.empty:
+        combined_sales = pd.concat([existing_sales, sales_df], ignore_index=True)
+        combined_sales.to_parquet(sales_path, index=False)
+        print(f"💾 Saved sales data: {sales_path} ({len(sales_df)} new rows, {len(combined_sales)} total)")
+    else:
+        print(f"⚠️  Sales data was empty, not saved")
+
+    if not appts_df.empty:
+        combined_appts = pd.concat([existing_appts, appts_df], ignore_index=True)
+        combined_appts.to_parquet(appts_path, index=False)
+        print(f"💾 Saved appointments data: {appts_path} ({len(appts_df)} new rows, {len(combined_appts)} total)")
+    else:
+        print(f"⚠️  Appointments data was empty, not saved")
+
+    return rpa_df, sales_df, appts_df
+
+
+def append_projections_if_needed():
+    """
+    Check if current week's projections data exists. If not, fetch and append.
+    Returns: (rpa_df, sales_df, appts_df) for the current week
+    """
+    # Load existing projections data
+    rpa_df, sales_df, appts_df = load_projections_data()
+
+    # Get current week
+    current_week_start, current_week_end = get_last_full_week()
+
+    # Check if current week already exists in projections data
+    has_rpa = parquet_has_week(rpa_df, current_week_start, current_week_end) if not rpa_df.empty else False
+    has_sales = parquet_has_week(sales_df, current_week_start, current_week_end) if not sales_df.empty else False
+    has_appts = parquet_has_week(appts_df, current_week_start, current_week_end) if not appts_df.empty else False
+
+    if has_rpa and has_sales and has_appts:
+        print(f"\n✅ Projections data for week {current_week_start} – {current_week_end} already exists!")
+        # Return current week's data
+        current_rpa = rpa_df[(rpa_df["week_start"] == current_week_start) & (rpa_df["week_end"] == current_week_end)]
+        current_sales = sales_df[(sales_df["week_start"] == current_week_start) & (sales_df["week_end"] == current_week_end)]
+        current_appts = appts_df[(appts_df["week_start"] == current_week_start) & (appts_df["week_end"] == current_week_end)]
+        return current_rpa, current_sales, current_appts
+
+    print(f"\n📊 Fetching projections data for week {current_week_start} – {current_week_end}...")
+
+    # Fetch and save new data
+    new_rpa, new_sales, new_appts = fetch_and_save_projections(current_week_start, current_week_end)
+
+    return new_rpa, new_sales, new_appts
+
+
 def fetch_and_append_week_if_needed(jobs_df: pd.DataFrame, calls_df: pd.DataFrame, roi_df: pd.DataFrame):
     """
     Fetch and append ALL missing weeks from the earliest data to today.
