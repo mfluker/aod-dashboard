@@ -25,14 +25,8 @@ MASTER_RPA_PARQUET = MASTERDATA_DIR / "projections_rpa_data.parquet"
 MASTER_SALES_PARQUET = MASTERDATA_DIR / "projections_sales_data.parquet"
 MASTER_APPTS_PARQUET = MASTERDATA_DIR / "projections_appointments_data.parquet"
 
-jobs_all_df = pd.read_parquet(MASTER_JOBS_PARQUET)
-calls_all_df = pd.read_parquet(MASTER_CALLS_PARQUET)
-roi_all_df = pd.read_parquet(MASTER_ROI_PARQUET)
-
-# Load projections data (if files exist)
-rpa_all_df = pd.read_parquet(MASTER_RPA_PARQUET) if MASTER_RPA_PARQUET.exists() else pd.DataFrame()
-sales_all_df = pd.read_parquet(MASTER_SALES_PARQUET) if MASTER_SALES_PARQUET.exists() else pd.DataFrame()
-appts_all_df = pd.read_parquet(MASTER_APPTS_PARQUET) if MASTER_APPTS_PARQUET.exists() else pd.DataFrame()
+# Data will be loaded dynamically via cached functions in dashboard_utils
+# This allows automatic cache invalidation when files are updated
 
 # Get last updated timestamp from parquet files
 def get_last_updated():
@@ -54,9 +48,9 @@ last_updated = get_last_updated()
 
 
 # ─── 1. Instantiate Dash App & Layout ─────────────────────────────────────
-# JOBS REMOVED - using calls_all_df for week options instead
-# all_franchisees = ["All"] + sorted(jobs_all_df["Franchisee"].dropna().unique())
-week_options = generate_week_options_from_parquet(calls_all_df)
+# Load initial data to generate week options (will reload dynamically in callbacks)
+_, calls_df_temp, _ = load_master_data()
+week_options = generate_week_options_from_parquet(calls_df_temp)
 
 app = Dash(__name__, suppress_callback_exceptions=True)
 
@@ -166,7 +160,8 @@ def toggle_cc_chart(n_clicks):
     Input("cc-metric-selector", "value")
 )
 def update_cc_chart(selected_metric):
-    return build_call_center_line_chart(calls_all_df, selected_metric)
+    _, calls_df, _ = load_master_data()
+    return build_call_center_line_chart(calls_df, selected_metric)
 
 
 # Marketing Chart Toggle Callback
@@ -188,7 +183,8 @@ def toggle_mkt_chart(n_clicks):
     Input("mkt-metric-selector", "value")
 )
 def update_mkt_chart(selected_metric):
-    return build_marketing_line_chart(roi_all_df, selected_metric)
+    _, _, roi_df = load_master_data()
+    return build_marketing_line_chart(roi_df, selected_metric)
 
 
 # Finance Chart Toggle Callback
@@ -210,7 +206,8 @@ def toggle_fin_chart(n_clicks):
     Input("fin-metric-selector", "value")
 )
 def update_fin_chart(selected_metric):
-    return build_finance_line_chart(roi_all_df, selected_metric)
+    _, _, roi_df = load_master_data()
+    return build_finance_line_chart(roi_df, selected_metric)
 
 
 # Appointments Forecast Chart Toggle Callback

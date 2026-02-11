@@ -13,12 +13,14 @@ from functools import lru_cache
 
 
 # Helpers
-@lru_cache(maxsize=1)
-def load_master_data():
-    """Read and cache the master parquet files from the parent directory."""
-    # base_dir = Path(__file__).resolve().parent.parent  # <-- from dashboard/ up to AoD_Dashboard/
-    # master_data_dir = base_dir / "Master_Data"
+def get_file_mtime(path):
+    """Get file modification time, or 0 if file doesn't exist."""
+    return path.stat().st_mtime if path.exists() else 0
 
+
+@lru_cache(maxsize=10)
+def _load_master_data_cached(calls_mtime, roi_mtime, jobs_mtime):
+    """Internal cached loader that uses file mtimes as cache key."""
     master_data_dir = Path(__file__).resolve().parent / "Master_Data"
 
     jobs_path  = master_data_dir / "all_jobs_data.parquet"
@@ -32,9 +34,25 @@ def load_master_data():
     return jobs_df, calls_df, roi_df
 
 
-@lru_cache(maxsize=1)
-def load_projections_data():
-    """Read and cache the projections parquet files."""
+def load_master_data():
+    """Read and cache the master parquet files. Cache invalidates when files change."""
+    master_data_dir = Path(__file__).resolve().parent / "Master_Data"
+
+    jobs_path  = master_data_dir / "all_jobs_data.parquet"
+    calls_path = master_data_dir / "all_call_center_data.parquet"
+    roi_path   = master_data_dir / "all_roi_data.parquet"
+
+    # Use file modification times as cache key
+    calls_mtime = get_file_mtime(calls_path)
+    roi_mtime = get_file_mtime(roi_path)
+    jobs_mtime = get_file_mtime(jobs_path)
+
+    return _load_master_data_cached(calls_mtime, roi_mtime, jobs_mtime)
+
+
+@lru_cache(maxsize=10)
+def _load_projections_data_cached(rpa_mtime, sales_mtime, appts_mtime):
+    """Internal cached loader that uses file mtimes as cache key."""
     master_data_dir = Path(__file__).resolve().parent / "Master_Data"
 
     rpa_path = master_data_dir / "projections_rpa_data.parquet"
@@ -46,6 +64,22 @@ def load_projections_data():
     appts_df = pd.read_parquet(appts_path) if appts_path.exists() else pd.DataFrame()
 
     return rpa_df, sales_df, appts_df
+
+
+def load_projections_data():
+    """Read and cache the projections parquet files. Cache invalidates when files change."""
+    master_data_dir = Path(__file__).resolve().parent / "Master_Data"
+
+    rpa_path = master_data_dir / "projections_rpa_data.parquet"
+    sales_path = master_data_dir / "projections_sales_data.parquet"
+    appts_path = master_data_dir / "projections_appointments_data.parquet"
+
+    # Use file modification times as cache key
+    rpa_mtime = get_file_mtime(rpa_path)
+    sales_mtime = get_file_mtime(sales_path)
+    appts_mtime = get_file_mtime(appts_path)
+
+    return _load_projections_data_cached(rpa_mtime, sales_mtime, appts_mtime)
 
 
 def get_delta_percent(current, previous):
