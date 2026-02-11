@@ -700,6 +700,7 @@ def fetch_future_appointments(session: requests.Session = None) -> pd.DataFrame:
         "sort_by": "date_added",
         "sort_dir": "ASC",
         "filter": "Submit",
+        "display": "all",  # Request all rows instead of paginated view
         "c[]": ["id", "location_id", "customer_id", "date_and_time_starts",
                 "siteuser_id", "is_rescheduled", "confirmed", "cancelled", "cancelled_by_id"],
     }
