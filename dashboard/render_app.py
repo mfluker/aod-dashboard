@@ -92,38 +92,17 @@ app.layout = html.Div(
                 "marginBottom": "20px",
             },
         ),
-        # Select Week Drop Down
+        # Hidden Week Selector (always defaults to latest week)
         html.Div(
             style={
-                "display": "flex",
-                "flexDirection": "column",
-                "alignItems": "center",
-                "marginBottom": "14px",
+                "display": "none",  # Hidden - always uses latest week
             },
             children=[
-                html.Label(
-                    "Select Date Range:",
-                    style={
-                        "fontSize": "14px",
-                        "color": "gray",
-                        "fontStyle": "italic",
-                        "marginBottom": "6px",
-                    },
-                ),
                 dcc.Dropdown(
                     id="date-selector",
                     options=week_options,
-                    value=week_options[0]["value"],
-                    placeholder="Select Week",
+                    value=week_options[0]["value"],  # Always defaults to latest week
                     clearable=False,
-                    style={
-                        "width": "240px",
-                        "fontFamily": "Segoe UI, sans-serif",
-                        "textAlign": "center",
-                        "fontSize": "14px",
-                        "borderRadius": "4px",
-                        "border": "1px solid #2C3E70",
-                    },
                 ),
                 # FRANCHISEE SELECTOR REMOVED - JOBS FEATURE REMOVED FROM DASHBOARD
                 # # HIDDEN FRANCHISEE SELECTOR (so the callback can hook into it)
@@ -232,6 +211,32 @@ def toggle_fin_chart(n_clicks):
 )
 def update_fin_chart(selected_metric):
     return build_finance_line_chart(roi_all_df, selected_metric)
+
+
+# Appointments Forecast Chart Toggle Callback
+@app.callback(
+    [Output("appts-forecast-container", "style"),
+     Output("appts-forecast-toggle", "children")],
+    Input("appts-forecast-toggle", "n_clicks")
+)
+def toggle_appts_forecast(n_clicks):
+    if n_clicks % 2 == 1:  # Odd clicks = show chart
+        return {"display": "block", "marginBottom": "30px"}, "📉 Hide Forecast Chart"
+    else:  # Even clicks = hide chart
+        return {"display": "none", "marginBottom": "30px"}, "📈 Show Forecast Chart"
+
+
+# Revenue Projection Chart Toggle Callback
+@app.callback(
+    [Output("revenue-projection-container", "style"),
+     Output("revenue-projection-toggle", "children")],
+    Input("revenue-projection-toggle", "n_clicks")
+)
+def toggle_revenue_projection(n_clicks):
+    if n_clicks % 2 == 1:  # Odd clicks = show chart
+        return {"display": "block", "marginBottom": "30px"}, "📉 Hide Revenue Projection"
+    else:  # Even clicks = hide chart
+        return {"display": "none", "marginBottom": "30px"}, "📈 Show Revenue Projection"
 
 
 # ─── 3. Run ─────────────────────────────────────────────────────────────────

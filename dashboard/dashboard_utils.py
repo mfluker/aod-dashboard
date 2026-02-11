@@ -844,6 +844,369 @@ def build_finance_line_chart(roi_all_df, selected_metric="revenue"):
     return fig
 
 
+def build_appointments_forecast_chart(appts_all_df):
+    """
+    Build a forecast chart showing future appointment pipeline over time.
+    Groups appointments by their scheduled week and shows trend.
+    """
+    if appts_all_df.empty or "Start Date and Time" not in appts_all_df.columns:
+        return go.Figure().update_layout(
+            title="No appointment data available",
+            font=dict(family="Segoe UI, sans-serif", color="#2C3E70")
+        )
+
+    # Parse appointment dates
+    appts_data = appts_all_df.copy()
+    appts_data["appt_date"] = pd.to_datetime(appts_data["Start Date and Time"], errors='coerce')
+    appts_data = appts_data[appts_data["appt_date"].notna()]
+
+    if appts_data.empty:
+        return go.Figure().update_layout(
+            title="No valid appointment dates found",
+            font=dict(family="Segoe UI, sans-serif", color="#2C3E70")
+        )
+
+    # Get the week start (Sunday) for each appointment
+    appts_data["week_start"] = appts_data["appt_date"] - pd.to_timedelta(appts_data["appt_date"].dt.dayofweek + 1, unit='d')
+    appts_data["week_start"] = appts_data["week_start"].dt.date
+
+    # Group by week and count appointments
+    weekly_counts = appts_data.groupby("week_start").size().reset_index(name="count")
+    weekly_counts = weekly_counts.sort_values("week_start")
+
+    # Create week labels
+    weekly_counts["week_end"] = weekly_counts["week_start"].apply(lambda d: d + timedelta(days=6))
+    weekly_counts["week_label"] = weekly_counts.apply(
+        lambda row: f"{row['week_start'].strftime('%m/%d')} – {row['week_end'].strftime('%m/%d')}",
+        axis=1
+    )
+
+    # Determine current date to split historical vs future
+    today = date.today()
+    weekly_counts["is_future"] = weekly_counts["week_start"] > today
+
+    # Split into historical and future
+    historical = weekly_counts[~weekly_counts["is_future"]]
+    future = weekly_counts[weekly_counts["is_future"]]
+
+    # Create figure
+    fig = go.Figure()
+
+    # Historical appointments (solid line)
+    if not historical.empty:
+        fig.add_trace(go.Scatter(
+            x=historical["week_label"],
+            y=historical["count"],
+            mode="lines+markers",
+            name="Historical",
+            line=dict(color="#2C3E70", width=3, shape="spline", smoothing=1.2),
+            marker=dict(size=7, color="white", line=dict(color="#2C3E70", width=2.5)),
+            fill="tozeroy",
+            fillcolor="rgba(44, 62, 112, 0.05)",
+            hovertemplate="%{y:,} appointments<extra></extra>"
+        ))
+
+    # Future appointments (dotted line)
+    if not future.empty:
+        # If there's historical data, connect from last historical point
+        if not historical.empty:
+            # Add connecting point
+            last_historical_x = historical.iloc[-1]["week_label"]
+            last_historical_y = historical.iloc[-1]["count"]
+            first_future_x = future.iloc[0]["week_label"]
+            first_future_y = future.iloc[0]["count"]
+
+            # Create connection line
+            fig.add_trace(go.Scatter(
+                x=[last_historical_x, first_future_x],
+                y=[last_historical_y, first_future_y],
+                mode="lines",
+                name="Projection",
+                line=dict(color="#2C3E70", width=3, dash="dot", shape="spline", smoothing=1.2),
+                showlegend=False,
+                hovertemplate="%{y:,} appointments<extra></extra>"
+            ))
+
+        # Add future appointments
+        fig.add_trace(go.Scatter(
+            x=future["week_label"],
+            y=future["count"],
+            mode="lines+markers",
+            name="Projected Pipeline",
+            line=dict(color="#2C3E70", width=3, dash="dot", shape="spline", smoothing=1.2),
+            marker=dict(size=7, color="white", line=dict(color="#2C3E70", width=2.5)),
+            hovertemplate="%{y:,} appointments<extra></extra>"
+        ))
+
+    # Add average line for future projections
+    if not future.empty:
+        future_avg = future["count"].mean()
+        fig.add_hline(
+            y=future_avg, line_dash="dot", line_color="rgba(44, 180, 70, 0.4)", line_width=1.5,
+            annotation_text=f"Future Avg: {int(future_avg):,}",
+            annotation_position="top right",
+            annotation_font=dict(size=11, color="rgba(44, 180, 70, 0.7)", family="Segoe UI, sans-serif"),
+        )
+
+    # Layout
+    fig.update_layout(
+        title=dict(
+            text="Future Appointment Pipeline Forecast",
+            font=dict(family="Segoe UI, sans-serif", size=18, color="#2C3E70"),
+            x=0.02, xanchor="left"
+        ),
+        yaxis_title="Number of Appointments",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        font=dict(family="Segoe UI, sans-serif", size=13, color="#2C3E70"),
+        hovermode="x unified",
+        hoverlabel=dict(
+            bgcolor="white", bordercolor="#2C3E70",
+            font=dict(family="Segoe UI, sans-serif", size=13, color="#2C3E70")
+        ),
+        height=400,
+        margin=dict(t=50, b=50, l=55, r=30),
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+
+    fig.update_xaxes(
+        showgrid=False,
+        showline=True, linecolor="#ddd", linewidth=1,
+        tickangle=-45,
+        tickfont=dict(size=11),
+    )
+
+    fig.update_yaxes(
+        showgrid=True, gridcolor="#f0f0f0", griddash="dot",
+        showline=False,
+        zeroline=False,
+        tickfont=dict(size=11),
+    )
+
+    return fig
+
+
+def build_revenue_projection_chart(appts_all_df, rpa_all_df):
+    """
+    Build a revenue projection chart by matching appointments to location RPA values.
+    Projects revenue weekly into the future based on scheduled appointments.
+    """
+    if appts_all_df.empty or "Start Date and Time" not in appts_all_df.columns:
+        return go.Figure().update_layout(
+            title="No appointment data available",
+            font=dict(family="Segoe UI, sans-serif", color="#2C3E70")
+        )
+
+    if rpa_all_df.empty or "Location" not in rpa_all_df.columns:
+        return go.Figure().update_layout(
+            title="No location RPA data available",
+            font=dict(family="Segoe UI, sans-serif", color="#2C3E70")
+        )
+
+    # Parse appointment dates
+    appts_data = appts_all_df.copy()
+    appts_data["appt_date"] = pd.to_datetime(appts_data["Start Date and Time"], errors='coerce')
+    appts_data = appts_data[appts_data["appt_date"].notna()]
+
+    if appts_data.empty:
+        return go.Figure().update_layout(
+            title="No valid appointment dates found",
+            font=dict(family="Segoe UI, sans-serif", color="#2C3E70")
+        )
+
+    # Get the most recent RPA data for each location
+    rpa_data = rpa_all_df.copy()
+
+    # Find the RPA column (handle different naming conventions)
+    rpa_column = None
+    for col in ["Revenue per Appointment", "Revenue Per Appointment", "RPA"]:
+        if col in rpa_data.columns:
+            rpa_column = col
+            break
+
+    if rpa_column is None:
+        return go.Figure().update_layout(
+            title="Revenue Per Appointment column not found",
+            font=dict(family="Segoe UI, sans-serif", color="#2C3E70")
+        )
+
+    # Helper to extract numeric value from RPA
+    import re
+    def extract_numeric(val):
+        if pd.isna(val):
+            return None
+        if isinstance(val, (int, float)):
+            return float(val)
+        cleaned = re.sub(r"[^\d\.\-]", "", str(val))
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+
+    # Get latest RPA value for each location
+    if "week_start" in rpa_data.columns:
+        rpa_data["week_start_dt"] = pd.to_datetime(rpa_data["week_start"])
+        rpa_data = rpa_data.sort_values("week_start_dt", ascending=False)
+        latest_rpa = rpa_data.groupby("Location").first().reset_index()
+    else:
+        latest_rpa = rpa_data.copy()
+
+    latest_rpa["rpa_value"] = latest_rpa[rpa_column].apply(extract_numeric)
+    latest_rpa = latest_rpa[latest_rpa["rpa_value"].notna()]
+
+    # Create location -> RPA lookup
+    location_rpa = dict(zip(latest_rpa["Location"], latest_rpa["rpa_value"]))
+
+    # Match appointments to RPA values
+    if "Location" not in appts_data.columns:
+        return go.Figure().update_layout(
+            title="Location column not found in appointments data",
+            font=dict(family="Segoe UI, sans-serif", color="#2C3E70")
+        )
+
+    appts_data["rpa"] = appts_data["Location"].map(location_rpa)
+    appts_data = appts_data[appts_data["rpa"].notna()]
+
+    if appts_data.empty:
+        return go.Figure().update_layout(
+            title="No appointments matched to location RPA data",
+            font=dict(family="Segoe UI, sans-serif", color="#2C3E70")
+        )
+
+    # Get the week start (Sunday) for each appointment
+    appts_data["week_start"] = appts_data["appt_date"] - pd.to_timedelta(appts_data["appt_date"].dt.dayofweek + 1, unit='d')
+    appts_data["week_start"] = appts_data["week_start"].dt.date
+
+    # Group by week and sum projected revenue
+    weekly_revenue = appts_data.groupby("week_start")["rpa"].sum().reset_index(name="projected_revenue")
+    weekly_revenue = weekly_revenue.sort_values("week_start")
+
+    # Create week labels
+    weekly_revenue["week_end"] = weekly_revenue["week_start"].apply(lambda d: d + timedelta(days=6))
+    weekly_revenue["week_label"] = weekly_revenue.apply(
+        lambda row: f"{row['week_start'].strftime('%m/%d')} – {row['week_end'].strftime('%m/%d')}",
+        axis=1
+    )
+
+    # Determine current date to split historical vs future
+    today = date.today()
+    weekly_revenue["is_future"] = weekly_revenue["week_start"] > today
+
+    # Split into historical and future
+    historical = weekly_revenue[~weekly_revenue["is_future"]]
+    future = weekly_revenue[weekly_revenue["is_future"]]
+
+    # Create figure
+    fig = go.Figure()
+
+    # Historical revenue (solid line)
+    if not historical.empty:
+        fig.add_trace(go.Scatter(
+            x=historical["week_label"],
+            y=historical["projected_revenue"],
+            mode="lines+markers",
+            name="Historical Revenue",
+            line=dict(color="#2c662d", width=3, shape="spline", smoothing=1.2),
+            marker=dict(size=7, color="white", line=dict(color="#2c662d", width=2.5)),
+            fill="tozeroy",
+            fillcolor="rgba(44, 102, 45, 0.05)",
+            hovertemplate="$%{y:,.2f}<extra></extra>"
+        ))
+
+    # Future projected revenue (dotted line)
+    if not future.empty:
+        # If there's historical data, connect from last historical point
+        if not historical.empty:
+            # Add connecting point
+            last_historical_x = historical.iloc[-1]["week_label"]
+            last_historical_y = historical.iloc[-1]["projected_revenue"]
+            first_future_x = future.iloc[0]["week_label"]
+            first_future_y = future.iloc[0]["projected_revenue"]
+
+            # Create connection line
+            fig.add_trace(go.Scatter(
+                x=[last_historical_x, first_future_x],
+                y=[last_historical_y, first_future_y],
+                mode="lines",
+                name="Projected Revenue",
+                line=dict(color="#2c662d", width=3, dash="dot", shape="spline", smoothing=1.2),
+                showlegend=False,
+                hovertemplate="$%{y:,.2f}<extra></extra>"
+            ))
+
+        # Add future projections
+        fig.add_trace(go.Scatter(
+            x=future["week_label"],
+            y=future["projected_revenue"],
+            mode="lines+markers",
+            name="Projected Revenue",
+            line=dict(color="#2c662d", width=3, dash="dot", shape="spline", smoothing=1.2),
+            marker=dict(size=7, color="white", line=dict(color="#2c662d", width=2.5)),
+            hovertemplate="$%{y:,.2f}<extra></extra>"
+        ))
+
+    # Add average line for future projections
+    if not future.empty:
+        future_avg = future["projected_revenue"].mean()
+        fig.add_hline(
+            y=future_avg, line_dash="dot", line_color="rgba(44, 102, 45, 0.4)", line_width=1.5,
+            annotation_text=f"Future Avg: ${future_avg:,.0f}",
+            annotation_position="top right",
+            annotation_font=dict(size=11, color="rgba(44, 102, 45, 0.7)", family="Segoe UI, sans-serif"),
+        )
+
+    # Layout
+    fig.update_layout(
+        title=dict(
+            text="Future Revenue Projection (Based on Appointment Pipeline)",
+            font=dict(family="Segoe UI, sans-serif", size=18, color="#2C3E70"),
+            x=0.02, xanchor="left"
+        ),
+        yaxis_title="Projected Revenue ($)",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        font=dict(family="Segoe UI, sans-serif", size=13, color="#2C3E70"),
+        hovermode="x unified",
+        hoverlabel=dict(
+            bgcolor="white", bordercolor="#2C3E70",
+            font=dict(family="Segoe UI, sans-serif", size=13, color="#2C3E70")
+        ),
+        height=400,
+        margin=dict(t=50, b=50, l=70, r=30),
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+
+    fig.update_xaxes(
+        showgrid=False,
+        showline=True, linecolor="#ddd", linewidth=1,
+        tickangle=-45,
+        tickfont=dict(size=11),
+    )
+
+    fig.update_yaxes(
+        showgrid=True, gridcolor="#f0f0f0", griddash="dot",
+        showline=False,
+        zeroline=False,
+        tickfont=dict(size=11),
+    )
+
+    return fig
+
+
 def build_call_center_metrics(outbound_df, proxy_last_week=None, booked_last_week=None):
     """
     Reads the Totals row in outbound_df and returns
@@ -2029,6 +2392,72 @@ def update_dashboard(selected_week, selected_franchisee="All"):
                     style={"color": "#2C3E70", "marginTop": "30px", "marginBottom": "12px"}
                 ),
                 build_appointment_pipeline_summary(appts_curr),
+
+                # Forecast Chart Toggle Button
+                html.Button(
+                    "📈 Show Forecast Chart",
+                    id="appts-forecast-toggle",
+                    n_clicks=0,
+                    style={
+                        "marginTop": "20px",
+                        "marginBottom": "10px",
+                        "padding": "10px 20px",
+                        "backgroundColor": "#f8f9fa",
+                        "border": "1px solid #ddd",
+                        "borderRadius": "6px",
+                        "cursor": "pointer",
+                        "fontSize": "14px",
+                        "fontWeight": "600",
+                        "color": "#2C3E70",
+                        "fontFamily": "Segoe UI, sans-serif",
+                    }
+                ),
+
+                # Forecast Chart Container (hidden by default)
+                html.Div(
+                    id="appts-forecast-container",
+                    style={"display": "none", "marginBottom": "30px"},
+                    children=[
+                        dcc.Graph(
+                            id="appts-forecast-chart",
+                            figure=build_appointments_forecast_chart(appts_all_df),
+                            config={"displayModeBar": False}
+                        )
+                    ]
+                ),
+
+                # Revenue Projection Chart Toggle Button
+                html.Button(
+                    "📈 Show Revenue Projection",
+                    id="revenue-projection-toggle",
+                    n_clicks=0,
+                    style={
+                        "marginTop": "20px",
+                        "marginBottom": "10px",
+                        "padding": "10px 20px",
+                        "backgroundColor": "#f8f9fa",
+                        "border": "1px solid #ddd",
+                        "borderRadius": "6px",
+                        "cursor": "pointer",
+                        "fontSize": "14px",
+                        "fontWeight": "600",
+                        "color": "#2C3E70",
+                        "fontFamily": "Segoe UI, sans-serif",
+                    }
+                ),
+
+                # Revenue Projection Chart Container (hidden by default)
+                html.Div(
+                    id="revenue-projection-container",
+                    style={"display": "none", "marginBottom": "30px"},
+                    children=[
+                        dcc.Graph(
+                            id="revenue-projection-chart",
+                            figure=build_revenue_projection_chart(appts_all_df, rpa_all_df),
+                            config={"displayModeBar": False}
+                        )
+                    ]
+                ),
 
                 # Full Rankings Tables (collapsible)
                 html.Details(
