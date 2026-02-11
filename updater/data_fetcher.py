@@ -481,9 +481,15 @@ def _parse_canvas_tables(html_text: str, debug_label: str = "") -> list:
     return results
 
 
-def fetch_location_rpa(session: requests.Session = None) -> pd.DataFrame:
+def fetch_location_rpa(session: requests.Session = None, start_date: str = None, end_date: str = None) -> pd.DataFrame:
     """
     Fetch location Revenue Per Appointment rankings from Canvas.
+
+    Args:
+        session: Authenticated requests session
+        start_date: Start date in MM/DD/YYYY format (optional, defaults to last 6 months)
+        end_date: End date in MM/DD/YYYY format (optional, defaults to today)
+
     Returns DataFrame with Location and Revenue_Per_Appt columns.
     """
     print(f"\n{'='*60}")
@@ -493,7 +499,12 @@ def fetch_location_rpa(session: requests.Session = None) -> pd.DataFrame:
         session = get_session_with_canvas_cookie()
 
     url = "https://canvas.artofdrawers.com/scripts/location_revenue_per_appointment_rankings.html"
-    params = {"presetdates": "l6m"}
+
+    # Use date range if provided, otherwise use preset
+    if start_date and end_date:
+        params = {"sd": start_date, "ed": end_date}
+    else:
+        params = {"presetdates": "l6m"}
 
     try:
         r = session.get(url, params=params)
@@ -548,15 +559,30 @@ def fetch_location_rpa(session: requests.Session = None) -> pd.DataFrame:
         print(f"   ❌ Could not parse any data table")
         return pd.DataFrame()
 
+    # Filter out "Total" row and other non-location rows
+    if "Location" in best_df.columns:
+        best_df = best_df[~best_df["Location"].str.contains("Total", case=False, na=False)]
+
+    # Filter out rows where Rank is not numeric (totals, summaries, etc.)
+    if "Rank" in best_df.columns:
+        best_df = best_df[pd.to_numeric(best_df["Rank"], errors='coerce').notna()]
+
     print(f"\n   ✅ Parsed {len(best_df)} rows, columns: {list(best_df.columns)}")
-    print(f"   First row: {best_df.iloc[0].to_dict()}")
+    if len(best_df) > 0:
+        print(f"   First row: {best_df.iloc[0].to_dict()}")
     print(f"{'='*60}")
     return best_df
 
 
-def fetch_location_sales(session: requests.Session = None) -> pd.DataFrame:
+def fetch_location_sales(session: requests.Session = None, start_date: str = None, end_date: str = None) -> pd.DataFrame:
     """
     Fetch location sales rankings from Canvas.
+
+    Args:
+        session: Authenticated requests session
+        start_date: Start date in MM/DD/YYYY format (optional, defaults to last 6 months)
+        end_date: End date in MM/DD/YYYY format (optional, defaults to today)
+
     Returns DataFrame with location sales data.
     """
     print(f"\n{'='*60}")
@@ -566,7 +592,12 @@ def fetch_location_sales(session: requests.Session = None) -> pd.DataFrame:
         session = get_session_with_canvas_cookie()
 
     url = "https://canvas.artofdrawers.com/scripts/location_sales_rankings.html"
-    params = {"presetdates": "l6m"}
+
+    # Use date range if provided, otherwise use preset
+    if start_date and end_date:
+        params = {"sd": start_date, "ed": end_date}
+    else:
+        params = {"presetdates": "l6m"}
 
     try:
         r = session.get(url, params=params)
@@ -623,8 +654,17 @@ def fetch_location_sales(session: requests.Session = None) -> pd.DataFrame:
         print(f"   ❌ Could not parse any data table")
         return pd.DataFrame()
 
+    # Filter out "Total" row and other non-location rows
+    if "Location" in best_df.columns:
+        best_df = best_df[~best_df["Location"].str.contains("Total", case=False, na=False)]
+
+    # Filter out rows where Rank is not numeric (totals, summaries, etc.)
+    if "Rank" in best_df.columns:
+        best_df = best_df[pd.to_numeric(best_df["Rank"], errors='coerce').notna()]
+
     print(f"\n   ✅ Parsed {len(best_df)} rows, columns: {list(best_df.columns)}")
-    print(f"   First row: {best_df.iloc[0].to_dict()}")
+    if len(best_df) > 0:
+        print(f"   First row: {best_df.iloc[0].to_dict()}")
     print(f"{'='*60}")
     return best_df
 
@@ -730,12 +770,63 @@ def fetch_future_appointments(session: requests.Session = None) -> pd.DataFrame:
         print(f"   ❌ Could not parse any data table")
         return pd.DataFrame()
 
-    # Check for pagination
+    # Check for pagination and fetch all pages
     soup = BeautifulSoup(r.text, "html.parser")
     page_links = soup.find_all("a", href=True, string=lambda s: s and s.strip().isdigit())
+
     if page_links:
-        print(f"   ⚠️  Pagination detected ({len(page_links)} page links). Only first page parsed.")
-        print(f"   Additional pages may need to be fetched for complete data.")
+        # Extract page numbers
+        page_numbers = []
+        for link in page_links:
+            try:
+                page_num = int(link.string.strip())
+                page_numbers.append(page_num)
+            except:
+                pass
+
+        max_page = max(page_numbers) if page_numbers else 1
+        print(f"   📄 Pagination detected: {max_page} total pages")
+
+        # Fetch remaining pages
+        all_dfs = [best_df]
+        for page_num in range(2, max_page + 1):
+            print(f"   📄 Fetching page {page_num}/{max_page}...")
+            try:
+                # Add page parameter to URL
+                page_params = {**params, "page": page_num}
+                r_page = session.get(url, params=page_params)
+
+                if r_page.status_code == 200:
+                    tables_page = _parse_canvas_tables(r_page.text, f"Future Appointments Page {page_num}")
+
+                    for headers, data_rows in tables_page:
+                        if len(data_rows) < 1 or len(headers) < 2:
+                            continue
+
+                        # Handle duplicate column names
+                        seen = {}
+                        unique_headers = []
+                        for header in headers:
+                            if header in seen:
+                                seen[header] += 1
+                                unique_headers.append(f"{header}_{seen[header]}")
+                            else:
+                                seen[header] = 0
+                                unique_headers.append(header)
+
+                        valid_rows = [row for row in data_rows if len(row) == len(unique_headers)]
+                        if valid_rows:
+                            df_page = pd.DataFrame(valid_rows, columns=unique_headers)
+                            all_dfs.append(df_page)
+                            print(f"      ✅ Page {page_num}: {len(df_page)} rows")
+                            break
+            except Exception as e:
+                print(f"      ⚠️  Failed to fetch page {page_num}: {e}")
+
+        # Combine all pages
+        if len(all_dfs) > 1:
+            best_df = pd.concat(all_dfs, ignore_index=True)
+            print(f"   ✅ Combined {len(all_dfs)} pages: {len(best_df)} total rows")
 
     print(f"\n   ✅ Parsed {len(best_df)} rows, columns: {list(best_df.columns)}")
     if len(best_df) > 0:

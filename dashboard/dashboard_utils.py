@@ -996,18 +996,16 @@ def build_call_center_metrics(outbound_df, proxy_last_week=None, booked_last_wee
 
 def build_location_ranking_cards(rpa_df, sales_df):
     """
-    Build location performance cards showing top 5 and bottom 5 locations.
-    Returns list of html.Div components.
+    Build location performance cards showing top 5 for sales and RPA separately.
+    Returns html.Div component with organized sections.
     """
-    cards = []
-
     if rpa_df.empty and sales_df.empty:
-        return [html.Div("No location data available", style={"color": "gray", "textAlign": "center"})]
+        return html.Div("No location data available", style={"color": "gray", "textAlign": "center"})
 
     # Helper to create a location card
     def create_location_card(location, rank, metric_value, metric_label, is_top=True):
         badge_color = "#2c662d" if is_top else "#b71c1c"
-        badge_text = f"#{rank}" if is_top else f"#{rank}"
+        badge_text = f"#{rank}"
 
         return html.Div(
             children=[
@@ -1025,40 +1023,63 @@ def build_location_ranking_cards(rpa_df, sales_df):
                         "fontWeight": "bold",
                     }
                 ),
-                html.H3(location, style={"color": "#2C3E70", "marginBottom": "8px", "fontSize": "18px"}),
-                html.Div(metric_value, style={"fontSize": "32px", "fontWeight": "bold", "color": badge_color, "marginBottom": "4px"}),
-                html.Div(metric_label, style={"fontSize": "12px", "color": "gray"}),
+                html.H3(location, style={"color": "#2C3E70", "marginBottom": "8px", "fontSize": "16px", "paddingRight": "50px"}),
+                html.Div(metric_value, style={"fontSize": "28px", "fontWeight": "bold", "color": badge_color, "marginBottom": "4px"}),
+                html.Div(metric_label, style={"fontSize": "11px", "color": "gray"}),
             ],
             style={
                 "position": "relative",
                 "border": f"2px solid {badge_color}",
                 "borderRadius": "8px",
                 "padding": "16px",
-                "minWidth": "200px",
+                "minWidth": "180px",
+                "flex": "1",
                 "backgroundColor": "white",
                 "boxShadow": "0 2px 4px rgba(0,0,0,0.1)",
             }
         )
 
-    # Top 5 Sales
+    sections = []
+
+    # Top 5 Sales Section
     if not sales_df.empty and "Rank" in sales_df.columns:
         sales_sorted = sales_df.sort_values("Rank").head(5)
+        sales_cards = []
         for _, row in sales_sorted.iterrows():
             location = row.get("Location", "Unknown")
             rank = row.get("Rank", "-")
             sales = row.get("Sales", "$0")
-            cards.append(create_location_card(location, rank, sales, "Total Sales", is_top=True))
+            sales_cards.append(create_location_card(location, rank, sales, "Total Sales", is_top=True))
 
-    # Top 5 RPA
+        sections.append(html.Div([
+            html.H4("Top 5 by Sales", style={"color": "#2C3E70", "marginBottom": "12px", "fontSize": "16px"}),
+            html.Div(sales_cards, style={"display": "flex", "gap": "12px", "flexWrap": "wrap", "marginBottom": "30px"})
+        ]))
+
+    # Top 5 RPA Section
     if not rpa_df.empty and "Rank" in rpa_df.columns:
         rpa_sorted = rpa_df.sort_values("Rank").head(5)
+        rpa_cards = []
+
+        # Try different possible column names for RPA
+        rpa_column = None
+        for col in ["Revenue per Appointment", "Revenue Per Appointment", "RPA"]:
+            if col in rpa_df.columns:
+                rpa_column = col
+                break
+
         for _, row in rpa_sorted.iterrows():
             location = row.get("Location", "Unknown")
             rank = row.get("Rank", "-")
-            rpa = row.get("Revenue per Appointment", "$0")
-            cards.append(create_location_card(location, rank, rpa, "Revenue per Appointment", is_top=True))
+            rpa = row.get(rpa_column, "$0") if rpa_column else "$0"
+            rpa_cards.append(create_location_card(location, rank, rpa, "Revenue per Appointment", is_top=True))
 
-    return cards
+        sections.append(html.Div([
+            html.H4("Top 5 by Revenue Per Appointment", style={"color": "#2C3E70", "marginBottom": "12px", "fontSize": "16px"}),
+            html.Div(rpa_cards, style={"display": "flex", "gap": "12px", "flexWrap": "wrap"})
+        ]))
+
+    return html.Div(sections)
 
 
 def build_appointment_pipeline_summary(appts_df):
@@ -2000,19 +2021,7 @@ def update_dashboard(selected_week, selected_franchisee="All"):
                 ),
 
                 # Top Performing Locations
-                html.H3(
-                    "Top Performing Locations",
-                    style={"color": "#2C3E70", "marginBottom": "12px", "fontSize": "16px"}
-                ),
-                html.Div(
-                    build_location_ranking_cards(rpa_curr, sales_curr),
-                    style={
-                        "display": "flex",
-                        "gap": "16px",
-                        "marginBottom": "30px",
-                        "flexWrap": "wrap",
-                    }
-                ),
+                build_location_ranking_cards(rpa_curr, sales_curr),
 
                 # Future Appointments Pipeline
                 html.H3(

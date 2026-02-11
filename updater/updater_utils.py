@@ -161,8 +161,8 @@ def fetch_and_save_projections(week_start: str, week_end: str):
     session = data_fetcher.get_session_with_canvas_cookie()
     fetched_at = dt.now().strftime("%B %d, %Y at %I:%M %p")
 
-    # Fetch RPA rankings
-    rpa_df = data_fetcher.fetch_location_rpa(session)
+    # Fetch RPA rankings with date range
+    rpa_df = data_fetcher.fetch_location_rpa(session, week_start, week_end)
     if not rpa_df.empty:
         rpa_df["week_start"] = week_start
         rpa_df["week_end"] = week_end
@@ -173,8 +173,8 @@ def fetch_and_save_projections(week_start: str, week_end: str):
                 rpa_df[col] = rpa_df[col].apply(data_fetcher._normalize_location)
                 break
 
-    # Fetch sales rankings
-    sales_df = data_fetcher.fetch_location_sales(session)
+    # Fetch sales rankings with date range
+    sales_df = data_fetcher.fetch_location_sales(session, week_start, week_end)
     if not sales_df.empty:
         sales_df["week_start"] = week_start
         sales_df["week_end"] = week_end
