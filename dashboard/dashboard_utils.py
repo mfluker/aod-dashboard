@@ -247,11 +247,12 @@ def percent_to_color(delta: float | None) -> str:
 
 def generate_week_options_from_parquet(df):
     """Generate week options from any DataFrame with week_start/week_end columns"""
-    weeks = (
-        df[["week_start", "week_end"]]
-        .drop_duplicates()
-        .sort_values("week_start", ascending=False)
-    )
+    weeks = df[["week_start", "week_end"]].drop_duplicates().copy()
+
+    # Convert to datetime for proper sorting (not alphabetical)
+    weeks["week_start_dt"] = pd.to_datetime(weeks["week_start"])
+    weeks = weeks.sort_values("week_start_dt", ascending=False)
+
     options = []
     for _, row in weeks.iterrows():
         ws = pd.to_datetime(row["week_start"]).date()
